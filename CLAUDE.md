@@ -21,14 +21,15 @@ Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Pinia** — stores in `src/stores/`
 - **`@` alias** resolves to `src/`
 
-`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>` (layout components in `src/components/`). All page-level components live in `src/pages/`. Current routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage).
+`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>` (layout components in `src/components/`). All page-level components live in `src/pages/`. Current routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage), `/success` (SuccessPage).
 
 ### Data layer
 
-- **Types** — `src/types/index.ts` defines `Product` and `CartItem` interfaces
+- **Types** — `src/types/index.ts` defines `Product`, `CartItem`, `Order`, and `OrderItem` interfaces
 - **Mock data** — `src/mock/product.ts` exports `MOCK_PRODUCTS` (seeded into `useProductStore` at init)
 - **`useProductStore`** — holds `products` ref, exposes `getProductById(id)`
 - **`useCartStore`** — holds `cartItems` ref, exposes `addToCart({ productId, quantity })` and `removeFromCart(productId)`
+- **`useOrderStore`** — holds `order` ref (array), exposes `createOrder(orderItems)` (returns new order id) and `getOrderById(id)`
 
 Font: **Titillium Web** (400 & 700 weights) loaded via `@fontsource/titillium-web` in `App.vue`.
 
