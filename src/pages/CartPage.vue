@@ -33,11 +33,8 @@ const cartTotal = computed(() =>
         <ul class="cart-list">
           <li v-for="cartItem in cartStore.cartItems" :key="cartItem.productId" class="cart-item">
             <div class="cart-item-image-wrap">
-              <img
-                :src="productStore.getProductById(cartItem.productId)?.image"
-                :alt="productStore.getProductById(cartItem.productId)?.name"
-                class="cart-item-image"
-              />
+              <img :src="productStore.getProductById(cartItem.productId)?.image"
+                :alt="productStore.getProductById(cartItem.productId)?.name" class="cart-item-image" />
             </div>
 
             <div class="cart-item-info">
@@ -47,27 +44,21 @@ const cartTotal = computed(() =>
             </div>
 
             <div class="qty-control">
-              <button
-                class="qty-btn"
-                @click="
-                  cartStore.updateQuantity({
-                    productId: cartItem.productId,
-                    quantity: cartItem.quantity - 1,
-                  })
-                "
-              >
+              <button class="qty-btn" @click="
+                cartStore.updateQuantity({
+                  productId: cartItem.productId,
+                  quantity: cartItem.quantity - 1,
+                })
+                ">
                 −
               </button>
               <span class="qty-value">{{ cartItem.quantity }}</span>
-              <button
-                class="qty-btn"
-                @click="
-                  cartStore.updateQuantity({
-                    productId: cartItem.productId,
-                    quantity: cartItem.quantity + 1,
-                  })
-                "
-              >
+              <button class="qty-btn" @click="
+                cartStore.updateQuantity({
+                  productId: cartItem.productId,
+                  quantity: cartItem.quantity + 1,
+                })
+                ">
                 +
               </button>
             </div>
@@ -91,7 +82,7 @@ const cartTotal = computed(() =>
             <span class="cart-total-label">Total</span>
             <span class="cart-total-value">${{ cartTotal }}</span>
           </div>
-          <button class="checkout-btn">Proceed to Checkout</button>
+          <router-link to="/checkout" class="checkout-btn">Proceed to Checkout</router-link>
         </div>
       </div>
     </div>
