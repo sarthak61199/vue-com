@@ -33,9 +33,9 @@ const cartSubtotal = computed(() =>
 const orderTotal = computed(() => cartSubtotal.value + shippingCost.value)
 
 const createOrder = () => {
-    orderStore.createOrder(cartStore.cartItems)
+    const orderId = orderStore.createOrder(cartStore.cartItems)
     cartStore.clearCart()
-    router.push('/success')
+    router.push(`/success?orderId=${orderId}`)
 }
 </script>
 

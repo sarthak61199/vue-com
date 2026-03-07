@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { useOrderStore } from '@/stores/order'
 import { useProductStore } from '@/stores/product'
-import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
 
 const orderStore = useOrderStore()
 const productStore = useProductStore()
 
-const orderTotal = computed(() =>
-    orderStore.order.reduce((total, item) => {
-        const product = productStore.getProductById(item.productId)
-        return total + (product?.price ?? 0) * item.quantity
-    }, 0),
-)
+const orderId = route.query.orderId as string
+
+const order = orderStore.getOrderById(parseInt(orderId))
 </script>
 
 <template>
@@ -37,7 +36,7 @@ const orderTotal = computed(() =>
                 <h2 class="section-title">Order Summary</h2>
 
                 <ul class="order-list">
-                    <li v-for="orderItem in orderStore.order" :key="orderItem.productId" class="order-item">
+                    <li v-for="orderItem in order?.items" :key="orderItem.productId" class="order-item">
                         <div class="order-item-image-wrap">
                             <img :src="productStore.getProductById(orderItem.productId)?.image"
                                 :alt="productStore.getProductById(orderItem.productId)?.name"
@@ -67,7 +66,7 @@ const orderTotal = computed(() =>
 
                 <div class="order-total">
                     <span class="order-total-label">Total</span>
-                    <span class="order-total-value">${{ orderTotal.toFixed(2) }}</span>
+                    <span class="order-total-value">${{ order?.total.toFixed(2) }}</span>
                 </div>
             </div>
 
