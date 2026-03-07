@@ -2,13 +2,19 @@
 import { useCartStore } from '@/stores/cart'
 import { useOrderStore } from '@/stores/order'
 import { useProductStore } from '@/stores/product'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const orderStore = useOrderStore()
 const productStore = useProductStore()
 const cartStore = useCartStore()
 const router = useRouter()
+
+onMounted(() => {
+    if (cartStore.cartItems.length === 0) {
+        router.push('/')
+    }
+})
 
 const selectedShipping = ref('standard')
 

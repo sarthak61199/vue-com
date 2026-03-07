@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { useOrderStore } from '@/stores/order'
 import { useProductStore } from '@/stores/product'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { onMounted } from 'vue'
 
 const route = useRoute()
+const router = useRouter()
 
 const orderStore = useOrderStore()
 const productStore = useProductStore()
 
 const orderId = route.query.orderId as string
+
+onMounted(() => {
+    if (!orderId) {
+        router.push('/')
+    }
+})
 
 const order = orderStore.getOrderById(parseInt(orderId))
 </script>
