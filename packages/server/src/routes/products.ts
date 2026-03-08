@@ -19,14 +19,33 @@ products.get('/', async (c) => {
     prisma.product.count({ where }),
   ])
 
-  return c.json({ items, total })
+  const ratings = await prisma.review.groupBy({
+    by: ['productId'],
+    where: { productId: { in: items.map((p) => p.id) } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  })
+  const ratingsMap = new Map(ratings.map((r) => [r.productId, r]))
+  const enriched = items.map((p) => {
+    const r = ratingsMap.get(p.id)
+    return { ...p, averageRating: r?._avg.rating ?? null, reviewCount: r?._count.rating ?? 0 }
+  })
+
+  return c.json({ items: enriched, total })
 })
 
 products.get('/:id', async (c) => {
   const { id } = c.req.param()
   const product = await prisma.product.findUnique({ where: { id } })
   if (!product) return c.json({ error: 'Product not found' }, 404)
-  return c.json(product)
+
+  const agg = await prisma.review.aggregate({
+    where: { productId: id },
+    _avg: { rating: true },
+    _count: { rating: true },
+  })
+  const reviewCount = agg._count.rating
+  return c.json({ ...product, averageRating: reviewCount > 0 ? agg._avg.rating : null, reviewCount })
 })
 
 export default products

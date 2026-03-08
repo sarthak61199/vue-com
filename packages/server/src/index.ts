@@ -4,6 +4,7 @@ import products from './routes/products.js'
 import carts from './routes/carts.js'
 import orders from './routes/orders.js'
 import auth from './routes/auth.js'
+import reviews from './routes/reviews.js'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
@@ -19,6 +20,7 @@ app.route('/auth', auth)
 app.route('/products', products)
 app.route('/carts', carts)
 app.route('/orders', orders)
+app.route('/reviews', reviews)
 
 serve({
   fetch: app.fetch,

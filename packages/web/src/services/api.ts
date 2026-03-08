@@ -29,6 +29,30 @@ export interface ApiProduct {
   image: string | null
   createdAt: string
   updatedAt: string
+  averageRating?: number | null
+  reviewCount?: number
+}
+
+export interface ApiReview {
+  id: string
+  userId: string
+  productId: string
+  rating: number
+  body: string | null
+  createdAt: string
+  updatedAt: string
+  user: { id: string; email: string }
+}
+
+export interface ApiReviewsResponse {
+  reviews: ApiReview[]
+  averageRating: number | null
+  reviewCount: number
+}
+
+export interface ApiEligibilityResponse {
+  canReview: boolean
+  existingReview: ApiReview | null
 }
 
 export interface ApiProductPage {
@@ -100,6 +124,17 @@ export const api = {
     }),
   removeCartItem: (cartId: string, productId: string) =>
     request<{ success: boolean }>(`/carts/${cartId}/items/${productId}`, { method: 'DELETE' }),
+
+  // Reviews
+  getProductReviews: (productId: string) =>
+    request<ApiReviewsResponse>(`/reviews/product/${productId}`),
+  getReviewEligibility: (productId: string) =>
+    request<ApiEligibilityResponse>(`/reviews/eligibility/${productId}`),
+  submitReview: (productId: string, rating: number, body?: string) =>
+    request<ApiReview>('/reviews', {
+      method: 'POST',
+      body: JSON.stringify({ productId, rating, body }),
+    }),
 
   // Orders
   createOrder: (cartId: string) =>

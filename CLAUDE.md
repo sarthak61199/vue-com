@@ -41,12 +41,14 @@ Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnl
 
 ### Data layer (web)
 
-All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiProductPage`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`, `ApiUser`). Stores call the server API directly:
+All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiProductPage`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`, `ApiUser`, `ApiReview`, `ApiReviewsResponse`, `ApiEligibilityResponse`). Stores call the server API directly:
 
 - **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
 - **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `fetchProducts(page, search?)`. No auto-fetch on creation; `HomePage` drives fetching based on URL `?page` and `?search` params.
 - **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`
 - **`useOrderStore`** — exposes `createOrder(cartId)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
+
+`ApiProduct` includes optional `averageRating?: number | null` and `reviewCount?: number` fields, computed server-side on every product endpoint (via `groupBy` for the list, `aggregate` for single). Both product endpoints always return these fields.
 
 `src/constants.ts` exports `IMAGE` — a placeholder image URL used across product displays.
 
@@ -54,6 +56,8 @@ All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, 
 
 - **`EmptyState.vue`** — props: `heading`, `message`, `linkTo`, `linkText`. Used in CartPage, OrdersPage, and HomePage (no-results state).
 - **`QuantityStepper.vue`** — props: `quantity`, `min` (default 1); emits `change` with new quantity. Disables decrement at `min`. Used in CartPage and ProductPage.
+- **`StarRating.vue`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`. Renders ★/☆ glyphs. Used in ProductCard and ProductPage.
+- **`ProductReviews.vue`** — props: `productId`; emits `reviewSubmitted`. Fetches reviews and eligibility on mount, renders aggregate summary, review form (if eligible), and reviews list. Review submission re-fetches both reviews and the parent product (via emitted event handled in ProductPage).
 
 ### Pagination & Search
 
@@ -87,12 +91,15 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 - `DELETE /api/carts/:id/items/:productId` — remove item
 - `POST /api/orders` — place order from cart (requires `{ cartId }`, clears cart items in transaction)
 - `GET /api/orders` — list all orders; `GET /api/orders/:id` — get order with items
+- `GET /api/reviews/product/:productId` — public; returns `{ reviews, averageRating, reviewCount }`
+- `GET /api/reviews/eligibility/:productId` — auth; returns `{ canReview, existingReview }` (`canReview` true if user has an OrderItem for this product)
+- `POST /api/reviews` — auth; body `{ productId, rating (1–5), body? }`; upserts (one review per user per product); validates purchase first
 
 ### Database
 
 Prisma with **better-sqlite3** adapter. Schema in `packages/server/prisma/schema.prisma`. Generated client outputs to `prisma/generated/`.
 
-Models: `Product`, `Cart`, `CartItem` (composite PK: cartId+productId), `Order` (has `userId` FK), `OrderItem` (composite PK: orderId+productId), `User`, `Session` (has `userId` FK, `expiresAt`).
+Models: `Product`, `Cart`, `CartItem` (composite PK: cartId+productId), `Order` (has `userId` FK), `OrderItem` (composite PK: orderId+productId), `User`, `Session` (has `userId` FK, `expiresAt`), `Review` (`@@unique([userId, productId])`, `rating Int`, `body String?`).
 
 `DATABASE_URL` is set in `packages/server/.env` (default: `file:./dev.db`).
 

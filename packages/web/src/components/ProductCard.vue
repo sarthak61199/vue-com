@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { IMAGE } from '@/constants';
 import type { ApiProduct } from '@/services/api'
+import StarRating from '@/components/StarRating.vue'
 
 defineProps<{
     product: ApiProduct
@@ -13,7 +14,15 @@ defineProps<{
             <img :src="product.image || IMAGE" :alt="product.name" class="product-image" />
         </div>
         <div class="product-info">
-            <h3 class="product-name">{{ product.name }}</h3>
+            <div class="product-name-row">
+                <h3 class="product-name">{{ product.name }}</h3>
+                <StarRating
+                    v-if="product.averageRating != null"
+                    :rating="product.averageRating"
+                    :count="product.reviewCount"
+                    size="sm"
+                />
+            </div>
             <p class="product-description">{{ product.description }}</p>
             <div class="product-footer">
                 <span class="product-price">${{ product.price }}</span>
@@ -69,11 +78,18 @@ defineProps<{
     padding: 1.25rem;
 }
 
+.product-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+}
+
 .product-name {
     font-size: 1rem;
     font-weight: 700;
     color: var(--color-charcoal);
-    margin-bottom: 0.375rem;
 }
 
 .product-description {

@@ -5,6 +5,8 @@ import { ref, onMounted } from 'vue'
 import { api, type ApiProduct } from '@/services/api'
 import { IMAGE } from '@/constants'
 import QuantityStepper from '@/components/QuantityStepper.vue'
+import StarRating from '@/components/StarRating.vue'
+import ProductReviews from '@/components/ProductReviews.vue'
 
 const route = useRoute()
 const cartStore = useCartStore()
@@ -24,6 +26,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function refreshProduct() {
+  product.value = await api.getProductById(productId)
+}
 </script>
 
 <template>
@@ -45,6 +51,9 @@ onMounted(async () => {
           <p class="product-label">Product</p>
           <h1 class="product-name">{{ product.name }}</h1>
           <p class="product-price">${{ product.price }}</p>
+          <div v-if="product.averageRating != null" class="product-rating">
+            <StarRating :rating="product.averageRating" :count="product.reviewCount" size="md" />
+          </div>
           <p class="product-description">{{ product.description }}</p>
           <div class="qty-wrap">
             <QuantityStepper :quantity="quantity" @change="quantity = $event" />
@@ -54,6 +63,8 @@ onMounted(async () => {
           </button>
         </div>
       </div>
+
+      <ProductReviews v-if="product" :product-id="product.id" @review-submitted="refreshProduct" />
 
       <div v-else-if="!loading" class="not-found">
         <p>Product not found.</p>
@@ -163,6 +174,10 @@ onMounted(async () => {
   border-left: 3px solid var(--color-mint);
   border-radius: 0 8px 8px 0;
   margin-bottom: 1.5rem;
+}
+
+.product-rating {
+  margin-bottom: 1.25rem;
 }
 
 .product-description {
