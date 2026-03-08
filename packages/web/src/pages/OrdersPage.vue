@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useOrderStore } from '@/stores/order'
 import { onMounted } from 'vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const orderStore = useOrderStore()
 
@@ -17,14 +18,15 @@ onMounted(async () => {
                 <h1 class="page-title">My Orders</h1>
             </div>
 
-            <div v-if="orderStore.loading" class="empty-state">
-                <p class="empty-message">Loading orders...</p>
-            </div>
+            <div v-if="orderStore.loading" class="loading-msg">Loading orders...</div>
 
-            <div v-else-if="orderStore.orders.length === 0" class="empty-state">
-                <p class="empty-message">No orders yet.</p>
-                <router-link to="/" class="shop-link">Start shopping →</router-link>
-            </div>
+            <EmptyState
+                v-else-if="orderStore.orders.length === 0"
+                heading="No orders yet"
+                message="Your completed orders will appear here."
+                link-to="/"
+                link-text="Start shopping →"
+            />
 
             <ul v-else class="orders-list">
                 <li v-for="order in orderStore.orders" :key="order.id" class="order-card">
@@ -84,29 +86,11 @@ onMounted(async () => {
     line-height: 1;
 }
 
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.loading-msg {
     padding: 5rem 0;
-    gap: 1.25rem;
-}
-
-.empty-message {
-    font-size: 1.125rem;
+    text-align: center;
+    font-size: 1rem;
     color: var(--color-stone);
-}
-
-.shop-link {
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--color-mint-dark);
-    transition: letter-spacing 0.2s ease;
-}
-
-.shop-link:hover {
-    letter-spacing: 0.12em;
 }
 
 .orders-list {

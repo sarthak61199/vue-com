@@ -3,6 +3,7 @@ import { useCartStore } from '@/stores/cart'
 import { computed } from 'vue'
 import { IMAGE } from '@/constants'
 import QuantityStepper from '@/components/QuantityStepper.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const cartStore = useCartStore()
 
@@ -20,10 +21,13 @@ const cartTotal = computed(() =>
       </div>
 
       <!-- Empty state -->
-      <div v-if="cartStore.cartItems.length === 0" class="empty-state">
-        <p class="empty-message">Your cart is empty.</p>
-        <router-link to="/" class="shop-link">Browse products →</router-link>
-      </div>
+      <EmptyState
+        v-if="cartStore.cartItems.length === 0"
+        heading="Your cart is empty"
+        message="Looks like you haven't added anything yet."
+        link-to="/"
+        link-text="Browse products →"
+      />
 
       <!-- Cart items -->
       <div v-else>
@@ -98,31 +102,6 @@ const cartTotal = computed(() =>
   line-height: 1;
 }
 
-/* Empty state */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 5rem 0;
-  gap: 1.25rem;
-}
-
-.empty-message {
-  font-size: 1.125rem;
-  color: var(--color-stone);
-}
-
-.shop-link {
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--color-mint-dark);
-  transition: letter-spacing 0.2s ease;
-}
-
-.shop-link:hover {
-  letter-spacing: 0.12em;
-}
 
 /* Cart list */
 .cart-list {

@@ -5,6 +5,7 @@ import { useProductStore } from '@/stores/product'
 import { useDebounce } from '@/composables/useDebounce'
 import ProductCard from '@/components/ProductCard.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const PAGE_SIZE = 9
 const route = useRoute()
@@ -66,14 +67,24 @@ const clearSearch = () => {
 
       <!-- Product grid -->
       <template v-else>
-        <ul class="product-grid">
-          <li v-for="product in productStore.products" :key="product.id">
-            <ProductCard :product="product" />
-          </li>
-        </ul>
+        <EmptyState
+          v-if="productStore.products.length === 0"
+          :heading="currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'"
+          message="Try a different search term or browse all products."
+          link-to="/"
+          link-text="Clear search →"
+        />
 
-        <PaginationControls :page="currentPage" :total="productStore.total" :page-size="PAGE_SIZE"
-          @prev="goTo(currentPage - 1)" @next="goTo(currentPage + 1)" />
+        <template v-else>
+          <ul class="product-grid">
+            <li v-for="product in productStore.products" :key="product.id">
+              <ProductCard :product="product" />
+            </li>
+          </ul>
+
+          <PaginationControls :page="currentPage" :total="productStore.total" :page-size="PAGE_SIZE"
+            @prev="goTo(currentPage - 1)" @next="goTo(currentPage + 1)" />
+        </template>
       </template>
     </div>
   </main>
