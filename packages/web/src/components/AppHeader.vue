@@ -23,6 +23,10 @@ const handleLogout = async () => {
     <div class="header-inner">
       <router-link to="/" class="logo">Store.</router-link>
       <nav class="nav">
+        <router-link to="/cart" class="nav-link cart-link">
+          <span>Cart</span>
+          <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
+        </router-link>
         <template v-if="authStore.user">
           <span class="user-email">{{ authStore.user.email }}</span>
           <router-link to="/orders" class="nav-link">My Orders</router-link>
@@ -31,10 +35,6 @@ const handleLogout = async () => {
         <template v-else>
           <router-link to="/login" class="nav-link">Sign in</router-link>
         </template>
-        <router-link to="/cart" class="nav-link cart-link">
-          <span>Cart</span>
-          <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
-        </router-link>
       </nav>
     </div>
   </header>
