@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { api, type ApiProduct } from '@/services/api'
 import { IMAGE } from '@/constants'
+import QuantityStepper from '@/components/QuantityStepper.vue'
 
 const route = useRoute()
 const cartStore = useCartStore()
@@ -12,6 +13,7 @@ const productId = route.params.id as string
 const product = ref<ApiProduct | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const quantity = ref(1)
 
 onMounted(async () => {
   try {
@@ -44,7 +46,10 @@ onMounted(async () => {
           <h1 class="product-name">{{ product.name }}</h1>
           <p class="product-price">${{ product.price }}</p>
           <p class="product-description">{{ product.description }}</p>
-          <button class="add-to-cart-btn" @click="cartStore.addToCart({ productId, quantity: 1 })">
+          <div class="qty-wrap">
+            <QuantityStepper :quantity="quantity" @change="quantity = $event" />
+          </div>
+          <button class="add-to-cart-btn" @click="cartStore.addToCart({ productId, quantity })">
             Add to Cart
           </button>
         </div>
@@ -122,6 +127,11 @@ onMounted(async () => {
 .product-details {
   display: flex;
   flex-direction: column;
+}
+
+.qty-wrap {
+  align-self: flex-start;
+  margin-bottom: 1rem;
 }
 
 .product-label {
