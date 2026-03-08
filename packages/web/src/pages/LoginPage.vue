@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const email = ref('')
 const password = ref('')
 
 const handleSubmit = async () => {
   await authStore.login(email.value, password.value)
-  if (authStore.user) router.push('/')
+  if (authStore.user) {
+    const redirectTo = route.query.redirectTo
+    router.push(typeof redirectTo === 'string' ? redirectTo : '/')
+  }
 }
 </script>
 

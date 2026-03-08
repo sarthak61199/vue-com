@@ -56,7 +56,7 @@ router.beforeEach(async (to) => {
     const authStore = useAuthStore()
     await authStore.initPromise
     if (to.meta.guestOnly && authStore.user) return '/'
-    if (to.meta.requiresAuth && !authStore.user) return '/login'
+    if (to.meta.requiresAuth && !authStore.user) return { path: '/login', query: { redirectTo: to.fullPath } }
   }
 })
 
