@@ -35,15 +35,24 @@ Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Pinia** — stores in `src/stores/`
 - **`@` alias** resolves to `src/`
 
-`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage), `/success` (SuccessPage), `/orders` (OrdersPage).
+`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage, requires auth), `/success` (SuccessPage), `/orders` (OrdersPage, requires auth), `/login` (LoginPage, guest only), `/register` (RegisterPage, guest only).
+
+Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnly`. Guards await `authStore.initPromise` before evaluating, so session hydration completes before any redirect.
 
 ### Data layer (web)
 
-All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`). Stores call the server API directly:
+All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiProductPage`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`, `ApiUser`). Stores call the server API directly:
 
-- **`useProductStore`** — auto-fetches products on creation; exposes `products`, `loading`, `error`, `getProductById(id)`
+- **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
+- **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `fetchProducts(page)`. No auto-fetch on creation; `HomePage` drives fetching based on URL `?page` param.
 - **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`
 - **`useOrderStore`** — exposes `createOrder(cartId)`, `getOrderById(id)`, `getOrders()`
+
+`src/constants.ts` exports `IMAGE` — a placeholder image URL used across product displays.
+
+### Pagination
+
+`GET /api/products?page=N` returns `{ items: ApiProduct[], total: number }` — 9 per page, ordered by `createdAt asc`. `HomePage` reads `?page` from the URL query, watches it with `{ immediate: true }`, and calls `fetchProducts(page)`. `PaginationControls.vue` is a presentational component (Prev/Next + "Page X of Y") that emits `prev`/`next` events; `HomePage` handles navigation via `router.push`. `ProductPage` fetches its product directly via `api.getProductById(id)` (not from the store) since the store only holds the current page's 9 items.
 
 Font: **Titillium Web** (400 & 700 weights) via `@fontsource/titillium-web` in `App.vue`.
 
@@ -66,7 +75,7 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 ### API Routes
 
 - `POST /api/auth/register` — create user; `POST /api/auth/login` — start session (sets httpOnly cookie); `POST /api/auth/logout` — end session; `GET /api/auth/me` — get current user (requires auth)
-- `GET/GET:id /api/products` — list all or get one product
+- `GET /api/products?page=N` — paginated list (9/page, returns `{ items, total }`); `GET /api/products/:id` — single product
 - `POST /api/carts` — create cart; `GET /api/carts/:id` — get cart with items
 - `POST /api/carts/:id/items` — add item (upserts, increments qty)
 - `PATCH /api/carts/:id/items/:productId` — set quantity

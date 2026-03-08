@@ -12,7 +12,7 @@
   --color-border: #c2ded7;
 
   /* Typography */
-  --font-sans: 'Titillium Web', sans-serif;
+  --font-sans: "Titillium Web", sans-serif;
 
   /* Shadows */
   --shadow-card: 0 2px 8px rgba(26, 32, 40, 0.07);
@@ -36,7 +36,7 @@ html {
 }
 
 body {
-  font-family: 'Titillium Web', sans-serif;
+  font-family: "Titillium Web", sans-serif;
   background-color: var(--color-cream);
   color: var(--color-charcoal);
 }
@@ -58,5 +58,5 @@ img {
 }
 
 button {
-  font-family: 'Titillium Web', sans-serif;
+  font-family: inherit;
 }

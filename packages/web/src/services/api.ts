@@ -31,6 +31,11 @@ export interface ApiProduct {
   updatedAt: string
 }
 
+export interface ApiProductPage {
+  items: ApiProduct[]
+  total: number
+}
+
 export interface ApiCartItem {
   cartId: string
   productId: string
@@ -73,7 +78,7 @@ export const api = {
   getMe: () => request<ApiUser>('/auth/me'),
 
   // Products
-  getProducts: () => request<ApiProduct[]>('/products'),
+  getProducts: (page = 1) => request<ApiProductPage>(`/products?page=${page}`),
   getProductById: (id: string) => request<ApiProduct>(`/products/${id}`),
 
   // Carts

@@ -1,8 +1,23 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/ProductCard.vue'
+import PaginationControls from '@/components/PaginationControls.vue'
 
+const PAGE_SIZE = 9
+const route = useRoute()
+const router = useRouter()
 const productStore = useProductStore()
+
+const currentPage = computed(() => {
+  const p = parseInt(route.query.page as string, 10)
+  return Number.isFinite(p) && p > 0 ? p : 1
+})
+
+watch(currentPage, (page) => productStore.fetchProducts(page), { immediate: true })
+
+const goTo = (page: number) => router.push({ query: { ...route.query, page } })
 </script>
 
 <template>
@@ -12,18 +27,28 @@ const productStore = useProductStore()
       <div class="page-header">
         <p class="page-label">New Collection</p>
         <h1 class="page-title">Fresh Picks</h1>
-        <p class="page-subtitle">{{ productStore.products.length }} products available</p>
+        <p class="page-subtitle">{{ productStore.total }} products available</p>
       </div>
 
       <p v-if="productStore.loading">Loading...</p>
       <p v-else-if="productStore.error">{{ productStore.error }}</p>
 
       <!-- Product grid -->
-      <ul v-else class="product-grid">
-        <li v-for="product in productStore.products" :key="product.id">
-          <ProductCard :product="product" />
-        </li>
-      </ul>
+      <template v-else>
+        <ul class="product-grid">
+          <li v-for="product in productStore.products" :key="product.id">
+            <ProductCard :product="product" />
+          </li>
+        </ul>
+
+        <PaginationControls
+          :page="currentPage"
+          :total="productStore.total"
+          :page-size="PAGE_SIZE"
+          @prev="goTo(currentPage - 1)"
+          @next="goTo(currentPage + 1)"
+        />
+      </template>
     </div>
   </main>
 </template>

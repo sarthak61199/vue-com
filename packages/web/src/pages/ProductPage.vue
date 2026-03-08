@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { useProductStore } from '@/stores/product'
 import { useCartStore } from '@/stores/cart'
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { api, type ApiProduct } from '@/services/api'
 import { IMAGE } from '@/constants'
 
 const route = useRoute()
-const productStore = useProductStore()
 const cartStore = useCartStore()
 
 const productId = route.params.id as string
-const product = computed(() => productStore.getProductById(productId))
+const product = ref<ApiProduct | null>(null)
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+    product.value = await api.getProductById(productId)
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -18,7 +29,10 @@ const product = computed(() => productStore.getProductById(productId))
     <div class="page-inner">
       <router-link to="/" class="back-link">← All Products</router-link>
 
-      <div v-if="product" class="product-layout">
+      <p v-if="loading">Loading...</p>
+      <p v-else-if="error">{{ error }}</p>
+
+      <div v-else-if="product" class="product-layout">
         <!-- Image -->
         <div class="product-image-wrap">
           <img :src="product.image || IMAGE" :alt="product.name" class="product-image" />
@@ -36,7 +50,7 @@ const product = computed(() => productStore.getProductById(productId))
         </div>
       </div>
 
-      <div v-else class="not-found">
+      <div v-else-if="!loading" class="not-found">
         <p>Product not found.</p>
         <router-link to="/" class="back-link" style="margin-top: 1rem; display: inline-block">
           ← Back to store
