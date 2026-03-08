@@ -35,17 +35,15 @@ Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Pinia** — stores in `src/stores/`
 - **`@` alias** resolves to `src/`
 
-`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage), `/success` (SuccessPage).
+`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage), `/success` (SuccessPage), `/orders` (OrdersPage).
 
 ### Data layer (web)
 
-- **Types** — `src/types/index.ts` defines `Product`, `CartItem`, `Order`, `OrderItem`
-- **Mock data** — `src/mock/product.ts` exports `MOCK_PRODUCTS` (seeded into `useProductStore`)
-- **`useProductStore`** — holds `products` ref, exposes `getProductById(id)`
-- **`useCartStore`** — in-memory cart; exposes `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`
-- **`useOrderStore`** — in-memory orders; exposes `createOrder(orderItems)` and `getOrderById(id)`
+All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`). Stores call the server API directly:
 
-> Note: the web frontend currently uses in-memory Pinia stores with mock data, not the server API.
+- **`useProductStore`** — auto-fetches products on creation; exposes `products`, `loading`, `error`, `getProductById(id)`
+- **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`
+- **`useOrderStore`** — exposes `createOrder(cartId)`, `getOrderById(id)`, `getOrders()`
 
 Font: **Titillium Web** (400 & 700 weights) via `@fontsource/titillium-web` in `App.vue`.
 
@@ -69,7 +67,7 @@ Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-c
 - `PATCH /api/carts/:id/items/:productId` — set quantity
 - `DELETE /api/carts/:id/items/:productId` — remove item
 - `POST /api/orders` — place order from cart (requires `{ cartId }`, clears cart items in transaction)
-- `GET /api/orders/:id` — get order with items
+- `GET /api/orders` — list all orders; `GET /api/orders/:id` — get order with items
 
 ### Database
 
