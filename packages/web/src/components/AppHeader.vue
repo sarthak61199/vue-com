@@ -13,8 +13,9 @@ const cartItemCount = computed(() =>
   <header class="header">
     <div class="header-inner">
       <router-link to="/" class="logo">Store.</router-link>
-      <nav>
-        <router-link to="/cart" class="cart-link">
+      <nav class="nav">
+        <router-link to="/orders" class="nav-link">My Orders</router-link>
+        <router-link to="/cart" class="nav-link cart-link">
           <span>Cart</span>
           <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
         </router-link>
@@ -49,7 +50,13 @@ const cartItemCount = computed(() =>
   letter-spacing: -0.03em;
 }
 
-.cart-link {
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-link {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -61,7 +68,7 @@ const cartItemCount = computed(() =>
   transition: color 0.2s ease;
 }
 
-.cart-link:hover {
+.nav-link:hover {
   color: var(--color-mint-dark);
 }
 

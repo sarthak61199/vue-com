@@ -83,4 +83,5 @@ export const api = {
       body: JSON.stringify({ cartId }),
     }),
   getOrderById: (orderId: string) => request<ApiOrder>(`/orders/${orderId}`),
+  getOrders: () => request<ApiOrder[]>('/orders'),
 }

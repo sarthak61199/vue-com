@@ -58,4 +58,16 @@ orders.get('/:id', async (c) => {
   return c.json(order)
 })
 
+// Get all orders
+orders.get('/', async (c) => {
+  const orders = await prisma.order.findMany({
+    include: {
+      orderItems: { include: { product: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return c.json(orders)
+})
+
 export default orders
