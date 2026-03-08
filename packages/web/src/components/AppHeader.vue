@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 import { computed } from 'vue'
 
 const cartStore = useCartStore()
+const authStore = useAuthStore()
+const router = useRouter()
 
 const cartItemCount = computed(() =>
   cartStore.cartItems.reduce((acc, item) => acc + item.quantity, 0),
 )
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -14,7 +23,14 @@ const cartItemCount = computed(() =>
     <div class="header-inner">
       <router-link to="/" class="logo">Store.</router-link>
       <nav class="nav">
-        <router-link to="/orders" class="nav-link">My Orders</router-link>
+        <template v-if="authStore.user">
+          <span class="user-email">{{ authStore.user.email }}</span>
+          <router-link to="/orders" class="nav-link">My Orders</router-link>
+          <button class="nav-btn" @click="handleLogout">Sign out</button>
+        </template>
+        <template v-else>
+          <router-link to="/login" class="nav-link">Sign in</router-link>
+        </template>
         <router-link to="/cart" class="nav-link cart-link">
           <span>Cart</span>
           <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
@@ -69,6 +85,33 @@ const cartItemCount = computed(() =>
 }
 
 .nav-link:hover {
+  color: var(--color-mint-dark);
+}
+
+.user-email {
+  font-size: 0.8125rem;
+  color: var(--color-stone);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Titillium Web', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-charcoal);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.nav-btn:hover {
   color: var(--color-mint-dark);
 }
 

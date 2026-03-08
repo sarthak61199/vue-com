@@ -2,6 +2,7 @@ const BASE = 'http://localhost:3000/api'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...init,
   })
@@ -13,6 +14,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // --- Response types (matches server schema) ---
+
+export interface ApiUser {
+  id: string
+  email: string
+  createdAt: string
+}
 
 export interface ApiProduct {
   id: string
@@ -48,6 +55,7 @@ export interface ApiOrderItem {
 export interface ApiOrder {
   id: string
   total: number
+  userId: string
   createdAt: string
   updatedAt: string
   orderItems: ApiOrderItem[]
@@ -56,6 +64,14 @@ export interface ApiOrder {
 // --- API ---
 
 export const api = {
+  // Auth
+  register: (email: string, password: string) =>
+    request<ApiUser>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (email: string, password: string) =>
+    request<ApiUser>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+  getMe: () => request<ApiUser>('/auth/me'),
+
   // Products
   getProducts: () => request<ApiProduct[]>('/products'),
   getProductById: (id: string) => request<ApiProduct>(`/products/${id}`),

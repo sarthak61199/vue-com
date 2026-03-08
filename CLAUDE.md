@@ -57,10 +57,15 @@ Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-c
 
 ## Server Architecture (`packages/server/`)
 
-**Hono** on `@hono/node-server`, port 3000. CORS open to `*`.
+**Hono** on `@hono/node-server`, port 3000. CORS restricted to `http://localhost:5173` with `credentials: true`.
+
+### Auth
+
+Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware reads an httpOnly `session` cookie, looks up the session in DB, and sets `userId` in context. Sessions expire after 7 days. Passwords hashed with bcrypt (cost 12).
 
 ### API Routes
 
+- `POST /api/auth/register` — create user; `POST /api/auth/login` — start session (sets httpOnly cookie); `POST /api/auth/logout` — end session; `GET /api/auth/me` — get current user (requires auth)
 - `GET/GET:id /api/products` — list all or get one product
 - `POST /api/carts` — create cart; `GET /api/carts/:id` — get cart with items
 - `POST /api/carts/:id/items` — add item (upserts, increments qty)
@@ -73,7 +78,7 @@ Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-c
 
 Prisma with **better-sqlite3** adapter. Schema in `packages/server/prisma/schema.prisma`. Generated client outputs to `prisma/generated/`.
 
-Models: `Product`, `Cart`, `CartItem` (composite PK: cartId+productId), `Order`, `OrderItem` (composite PK: orderId+productId).
+Models: `Product`, `Cart`, `CartItem` (composite PK: cartId+productId), `Order` (has `userId` FK), `OrderItem` (composite PK: orderId+productId), `User`, `Session` (has `userId` FK, `expiresAt`).
 
 `DATABASE_URL` is set in `packages/server/.env` (default: `file:./dev.db`).
 

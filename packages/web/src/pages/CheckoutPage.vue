@@ -35,6 +35,8 @@ const orderTotal = computed(() => cartSubtotal.value + shippingCost.value)
 
 const createOrder = async () => {
     const orderId = await orderStore.createOrder(cartStore.cartId!)
+    if (!orderId) return
+
     cartStore.clearCart()
     router.push(`/success?orderId=${orderId}`)
 }
@@ -111,7 +113,10 @@ const createOrder = async () => {
                             </div>
                         </div>
 
-                        <button class="place-order-btn" @click="createOrder">Place Order</button>
+                        <p v-if="orderStore.error" class="order-error">{{ orderStore.error }}</p>
+                        <button class="place-order-btn" :disabled="orderStore.loading" @click="createOrder">
+                            {{ orderStore.loading ? 'Placing order…' : 'Place Order' }}
+                        </button>
                     </section>
                 </div>
             </div>
@@ -399,5 +404,18 @@ const createOrder = async () => {
 
 .place-order-btn:active {
     transform: translateY(0);
+}
+
+.place-order-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.order-error {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #d94f4f;
+    margin-bottom: 0.75rem;
 }
 </style>
