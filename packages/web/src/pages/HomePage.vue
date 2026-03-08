@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
+import { useDebounce } from '@/composables/useDebounce'
 import ProductCard from '@/components/ProductCard.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
 
@@ -15,9 +16,28 @@ const currentPage = computed(() => {
   return Number.isFinite(p) && p > 0 ? p : 1
 })
 
-watch(currentPage, (page) => productStore.fetchProducts(page), { immediate: true })
+const currentSearch = computed(() => (route.query.search as string) || '')
+
+const searchInput = ref(currentSearch.value)
+const debouncedSearch = useDebounce(searchInput, 300)
+
+watch(debouncedSearch, (val) => {
+  if (val === currentSearch.value) return
+  router.push({ query: { ...(val ? { search: val } : {}), page: 1 } })
+})
+
+watch(
+  [currentPage, currentSearch],
+  ([page, search]) => productStore.fetchProducts(page, search || undefined),
+  { immediate: true },
+)
 
 const goTo = (page: number) => router.push({ query: { ...route.query, page } })
+
+const clearSearch = () => {
+  searchInput.value = ''
+  router.push({ query: { page: 1 } })
+}
 </script>
 
 <template>
@@ -27,7 +47,18 @@ const goTo = (page: number) => router.push({ query: { ...route.query, page } })
       <div class="page-header">
         <p class="page-label">New Collection</p>
         <h1 class="page-title">Fresh Picks</h1>
-        <p class="page-subtitle">{{ productStore.total }} products available</p>
+        <p class="page-subtitle">
+          <template v-if="currentSearch">
+            {{ productStore.total }} results for "{{ currentSearch }}"
+          </template>
+          <template v-else>{{ productStore.total }} products available</template>
+        </p>
+      </div>
+
+      <!-- Search bar -->
+      <div class="search-bar">
+        <input v-model="searchInput" type="search" placeholder="Search products..." class="search-input" />
+        <button :disabled="!currentSearch" class="clear-btn" @click="clearSearch">Clear</button>
       </div>
 
       <p v-if="productStore.loading">Loading...</p>
@@ -41,13 +72,8 @@ const goTo = (page: number) => router.push({ query: { ...route.query, page } })
           </li>
         </ul>
 
-        <PaginationControls
-          :page="currentPage"
-          :total="productStore.total"
-          :page-size="PAGE_SIZE"
-          @prev="goTo(currentPage - 1)"
-          @next="goTo(currentPage + 1)"
-        />
+        <PaginationControls :page="currentPage" :total="productStore.total" :page-size="PAGE_SIZE"
+          @prev="goTo(currentPage - 1)" @next="goTo(currentPage + 1)" />
       </template>
     </div>
   </main>
@@ -91,6 +117,50 @@ const goTo = (page: number) => router.push({ query: { ...route.query, page } })
 .page-subtitle {
   font-size: 0.9375rem;
   color: var(--color-stone);
+}
+
+/* Search */
+.search-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid var(--color-stone);
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  color: var(--color-charcoal);
+  background: transparent;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-input:focus {
+  border-color: var(--color-mint-dark);
+}
+
+.clear-btn {
+  padding: 0.625rem 1rem;
+  border: 1.5px solid var(--color-stone);
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.875rem;
+  color: var(--color-stone);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.clear-btn:hover {
+  border-color: var(--color-charcoal);
+  color: var(--color-charcoal);
+}
+
+.clear-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* Grid */

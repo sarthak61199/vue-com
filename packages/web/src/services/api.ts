@@ -78,7 +78,11 @@ export const api = {
   getMe: () => request<ApiUser>('/auth/me'),
 
   // Products
-  getProducts: (page = 1) => request<ApiProductPage>(`/products?page=${page}`),
+  getProducts: (page = 1, search?: string) => {
+    const params = new URLSearchParams({ page: String(page) })
+    if (search) params.set('search', search)
+    return request<ApiProductPage>(`/products?${params}`)
+  },
   getProductById: (id: string) => request<ApiProduct>(`/products/${id}`),
 
   // Carts

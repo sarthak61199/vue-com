@@ -8,11 +8,11 @@ export const useProductStore = defineStore('product', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const fetchProducts = async (page: number) => {
+  const fetchProducts = async (page: number, search?: string) => {
     loading.value = true
     error.value = null
     try {
-      const data = await api.getProducts(page)
+      const data = await api.getProducts(page, search)
       products.value = data.items
       total.value = data.total
     } catch (e) {

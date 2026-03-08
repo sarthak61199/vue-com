@@ -8,10 +8,15 @@ products.get('/', async (c) => {
   const raw = c.req.query('page')
   const page = Math.max(1, parseInt(raw ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
+  const search = c.req.query('search')?.trim()
+
+  const where = search
+    ? { OR: [{ name: { contains: search } }, { description: { contains: search } }] }
+    : {}
 
   const [items, total] = await prisma.$transaction([
-    prisma.product.findMany({ skip, take: PAGE_SIZE, orderBy: { createdAt: 'asc' } }),
-    prisma.product.count(),
+    prisma.product.findMany({ where, skip, take: PAGE_SIZE, orderBy: { createdAt: 'asc' } }),
+    prisma.product.count({ where }),
   ])
 
   return c.json({ items, total })
