@@ -35,9 +35,9 @@ Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Pinia** — stores in `src/stores/`
 - **`@` alias** resolves to `src/`
 
-`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage, requires auth), `/success` (SuccessPage), `/orders` (OrdersPage, requires auth), `/login` (LoginPage, guest only), `/register` (RegisterPage, guest only).
+`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage, requires auth), `/success` (SuccessPage), `/orders` (OrdersPage, requires auth), `/orders/:id` (OrderDetailPage, requires auth), `/login` (LoginPage, guest only), `/register` (RegisterPage, guest only).
 
-Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnly`. Guards await `authStore.initPromise` before evaluating, so session hydration completes before any redirect.
+Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnly`. Guards await `authStore.initPromise` before evaluating, so session hydration completes before any redirect. When redirecting an unauthenticated user to `/login`, the guard passes `?redirectTo=<original path>` as a query param; `LoginPage` reads this and redirects back after successful login.
 
 ### Data layer (web)
 
@@ -46,9 +46,14 @@ All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, 
 - **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
 - **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `fetchProducts(page, search?)`. No auto-fetch on creation; `HomePage` drives fetching based on URL `?page` and `?search` params.
 - **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`
-- **`useOrderStore`** — exposes `createOrder(cartId)`, `getOrderById(id)`, `getOrders()`
+- **`useOrderStore`** — exposes `createOrder(cartId)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
 
 `src/constants.ts` exports `IMAGE` — a placeholder image URL used across product displays.
+
+### Shared Components
+
+- **`EmptyState.vue`** — props: `heading`, `message`, `linkTo`, `linkText`. Used in CartPage, OrdersPage, and HomePage (no-results state).
+- **`QuantityStepper.vue`** — props: `quantity`, `min` (default 1); emits `change` with new quantity. Disables decrement at `min`. Used in CartPage and ProductPage.
 
 ### Pagination & Search
 

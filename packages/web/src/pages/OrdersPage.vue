@@ -37,7 +37,10 @@ onMounted(async () => {
                                 {{ new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}
                             </p>
                         </div>
-                        <p class="order-total">${{ order.total.toFixed(2) }}</p>
+                        <div class="order-card-right">
+                            <p class="order-total">${{ order.total.toFixed(2) }}</p>
+                            <router-link :to="'/orders/' + order.id" class="view-link">View →</router-link>
+                        </div>
                     </div>
 
                     <ul class="order-items">
@@ -131,11 +134,31 @@ onMounted(async () => {
     color: var(--color-stone);
 }
 
+.order-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
 .order-total {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--color-charcoal);
     letter-spacing: -0.02em;
+}
+
+.view-link {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-mint-dark);
+    transition: letter-spacing 0.2s ease;
+}
+
+.view-link:hover {
+    letter-spacing: 0.14em;
 }
 
 .order-items {
