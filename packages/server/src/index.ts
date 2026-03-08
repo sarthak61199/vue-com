@@ -3,17 +3,22 @@ import { Hono } from 'hono'
 import products from './routes/products.js'
 import carts from './routes/carts.js'
 import orders from './routes/orders.js'
+import auth from './routes/auth.js'
 import { cors } from 'hono/cors'
+import { logger } from 'hono/logger'
 
-const app = new Hono()
+const app = new Hono().basePath('/api')
 
+app.use(logger())
 app.use(cors({
-  origin: '*',
+  origin: 'http://localhost:5173',
+  credentials: true,
 }))
 
-app.route('/api/products', products)
-app.route('/api/carts', carts)
-app.route('/api/orders', orders)
+app.route('/auth', auth)
+app.route('/products', products)
+app.route('/carts', carts)
+app.route('/orders', orders)
 
 serve({
   fetch: app.fetch,

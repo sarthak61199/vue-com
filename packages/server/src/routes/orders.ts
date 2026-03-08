@@ -1,10 +1,13 @@
 import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
+import { requireAuth } from '../middleware/auth.js'
+import type { AuthEnv } from '../types/auth.js'
 
-const orders = new Hono()
+const orders = new Hono<AuthEnv>()
 
 // Place an order from a cart
-orders.post('/', async (c) => {
+orders.post('/', requireAuth, async (c) => {
+  const userId = c.get('userId')
   const body = await c.req.json<{ cartId: string }>()
   if (!body.cartId) return c.json({ error: 'cartId is required' }, 400)
 
@@ -25,6 +28,7 @@ orders.post('/', async (c) => {
     const newOrder = await tx.order.create({
       data: {
         total,
+        userId,
         orderItems: {
           create: cart.cartItems.map((item) => ({
             productId: item.productId,
@@ -46,7 +50,8 @@ orders.post('/', async (c) => {
 })
 
 // Get order by ID
-orders.get('/:id', async (c) => {
+orders.get('/:id', requireAuth, async (c) => {
+  const userId = c.get('userId')
   const { id } = c.req.param()
   const order = await prisma.order.findUnique({
     where: { id },
@@ -55,19 +60,22 @@ orders.get('/:id', async (c) => {
     },
   })
   if (!order) return c.json({ error: 'Order not found' }, 404)
+  if (order.userId !== userId) return c.json({ error: 'Forbidden' }, 403)
   return c.json(order)
 })
 
-// Get all orders
-orders.get('/', async (c) => {
-  const orders = await prisma.order.findMany({
+// Get all orders for the current user
+orders.get('/', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const userOrders = await prisma.order.findMany({
+    where: { userId },
     include: {
       orderItems: { include: { product: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
 
-  return c.json(orders)
+  return c.json(userOrders)
 })
 
 export default orders
