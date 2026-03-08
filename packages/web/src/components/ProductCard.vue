@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IMAGE } from '@/mock/product';
+import { IMAGE } from '@/constants';
 import type { ApiProduct } from '@/services/api'
 
 defineProps<{

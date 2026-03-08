@@ -3,7 +3,7 @@ import { useCartStore } from '@/stores/cart'
 import { useOrderStore } from '@/stores/order'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { IMAGE } from '@/mock/product'
+import { IMAGE } from '@/constants'
 
 const orderStore = useOrderStore()
 const cartStore = useCartStore()

@@ -2,7 +2,7 @@
 import { useOrderStore } from '@/stores/order'
 import { useRoute, useRouter } from 'vue-router'
 import { onMounted } from 'vue'
-import { IMAGE } from '@/mock/product'
+import { IMAGE } from '@/constants'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { computed } from 'vue'
-import { IMAGE } from '@/mock/product'
+import { IMAGE } from '@/constants'
 
 const cartStore = useCartStore()
 
