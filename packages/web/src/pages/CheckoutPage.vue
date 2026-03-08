@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { useOrderStore } from '@/stores/order'
-import { useProductStore } from '@/stores/product'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { IMAGE } from '@/mock/product'
 
 const orderStore = useOrderStore()
-const productStore = useProductStore()
 const cartStore = useCartStore()
 const router = useRouter()
 
@@ -26,20 +25,16 @@ const shippingOptions = [
 
 const shippingCost = computed(
     () => shippingOptions.find((o) => o.id === selectedShipping.value)?.price ?? 0,
-
 )
 
 const cartSubtotal = computed(() =>
-    cartStore.cartItems.reduce((total, item) => {
-        const product = productStore.getProductById(item.productId)
-        return total + (product?.price ?? 0) * item.quantity
-    }, 0),
+    cartStore.cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
 )
 
 const orderTotal = computed(() => cartSubtotal.value + shippingCost.value)
 
-const createOrder = () => {
-    const orderId = orderStore.createOrder(cartStore.cartItems)
+const createOrder = async () => {
+    const orderId = await orderStore.createOrder(cartStore.cartId!)
     cartStore.clearCart()
     router.push(`/success?orderId=${orderId}`)
 }
@@ -88,21 +83,13 @@ const createOrder = () => {
                         <ul class="summary-list">
                             <li v-for="cartItem in cartStore.cartItems" :key="cartItem.productId" class="summary-item">
                                 <div class="summary-item-image-wrap">
-                                    <img :src="productStore.getProductById(cartItem.productId)?.image"
-                                        :alt="productStore.getProductById(cartItem.productId)?.name"
+                                    <img :src="cartItem.product.image || IMAGE" :alt="cartItem.product.name"
                                         class="summary-item-image" />
                                     <span class="summary-item-qty">{{ cartItem.quantity }}</span>
                                 </div>
-                                <p class="summary-item-name">
-                                    {{ productStore.getProductById(cartItem.productId)?.name }}
-                                </p>
+                                <p class="summary-item-name">{{ cartItem.product.name }}</p>
                                 <p class="summary-item-price">
-                                    ${{
-                                        (
-                                            (productStore.getProductById(cartItem.productId)?.price ?? 0) *
-                                            cartItem.quantity
-                                        ).toFixed(2)
-                                    }}
+                                    ${{ (cartItem.product.price * cartItem.quantity).toFixed(2) }}
                                 </p>
                             </li>
                         </ul>
@@ -304,7 +291,7 @@ const createOrder = () => {
 .summary-item-image {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     border-radius: 8px;
     background: var(--color-mint-50);
     border: 1px solid var(--color-mint-100);

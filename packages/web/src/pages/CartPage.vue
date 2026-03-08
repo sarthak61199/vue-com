@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
-import { useProductStore } from '@/stores/product'
 import { computed } from 'vue'
+import { IMAGE } from '@/mock/product'
 
-const productStore = useProductStore()
 const cartStore = useCartStore()
 
 const cartTotal = computed(() =>
-  cartStore.cartItems.reduce((total, item) => {
-    const product = productStore.getProductById(item.productId)
-    return total + (product?.price ?? 0) * item.quantity
-  }, 0),
+  cartStore.cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
 )
 </script>
 
@@ -33,14 +29,11 @@ const cartTotal = computed(() =>
         <ul class="cart-list">
           <li v-for="cartItem in cartStore.cartItems" :key="cartItem.productId" class="cart-item">
             <div class="cart-item-image-wrap">
-              <img :src="productStore.getProductById(cartItem.productId)?.image"
-                :alt="productStore.getProductById(cartItem.productId)?.name" class="cart-item-image" />
+              <img :src="cartItem.product.image || IMAGE" :alt="cartItem.product.name" class="cart-item-image" />
             </div>
 
             <div class="cart-item-info">
-              <p class="cart-item-name">
-                {{ productStore.getProductById(cartItem.productId)?.name }}
-              </p>
+              <p class="cart-item-name">{{ cartItem.product.name }}</p>
             </div>
 
             <div class="qty-control">
@@ -64,11 +57,7 @@ const cartTotal = computed(() =>
             </div>
 
             <div class="cart-item-right">
-              <p class="cart-item-price">
-                ${{
-                  (productStore.getProductById(cartItem.productId)?.price ?? 0) * cartItem.quantity
-                }}
-              </p>
+              <p class="cart-item-price">${{ cartItem.product.price * cartItem.quantity }}</p>
               <button class="remove-btn" @click="cartStore.removeFromCart(cartItem.productId)">
                 Remove
               </button>
@@ -176,7 +165,7 @@ const cartTotal = computed(() =>
 .cart-item-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .cart-item-info {

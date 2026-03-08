@@ -1,27 +1,38 @@
+import { api, type ApiOrder } from '@/services/api'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Order, OrderItem } from '@/types'
-import { useProductStore } from './product'
-
 
 export const useOrderStore = defineStore('order', () => {
-    const productStore = useProductStore()
+  const currentOrder = ref<ApiOrder | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
-    const order = ref<Order[]>([])
-
-    const createOrder = (orderItems: OrderItem[]) => {
-        order.value.push({
-            id: order.value.length + 1,
-            items: orderItems,
-            total: orderItems.reduce((total, item) => total + (productStore.getProductById(item.productId)?.price ?? 0) * item.quantity, 0),
-        })
-
-        return order.value[order.value.length - 1]?.id
+  const createOrder = async (cartId: string) => {
+    loading.value = true
+    error.value = null
+    try {
+      currentOrder.value = await api.createOrder(cartId)
+      return currentOrder.value.id
+    } catch (e) {
+      error.value = (e as Error).message
+    } finally {
+      loading.value = false
     }
+  }
 
-    const getOrderById = (id: number) => {
-        return order.value.find((order) => order.id === id)
+  const getOrderById = async (id: string) => {
+    if (currentOrder.value?.id === id) return currentOrder.value
+    loading.value = true
+    error.value = null
+    try {
+      currentOrder.value = await api.getOrderById(id)
+      return currentOrder.value
+    } catch (e) {
+      error.value = (e as Error).message
+    } finally {
+      loading.value = false
     }
+  }
 
-    return { order, createOrder, getOrderById }
+  return { currentOrder, loading, error, createOrder, getOrderById }
 })

@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import { useOrderStore } from '@/stores/order'
-import { useProductStore } from '@/stores/product'
 import { useRoute, useRouter } from 'vue-router'
 import { onMounted } from 'vue'
+import { IMAGE } from '@/mock/product'
 
 const route = useRoute()
 const router = useRouter()
 
 const orderStore = useOrderStore()
-const productStore = useProductStore()
 
 const orderId = route.query.orderId as string
 
-onMounted(() => {
+onMounted(async () => {
     if (!orderId) {
         router.push('/')
+        return
     }
+    await orderStore.getOrderById(orderId)
 })
-
-const order = orderStore.getOrderById(parseInt(orderId))
 </script>
 
 <template>
@@ -44,37 +43,28 @@ const order = orderStore.getOrderById(parseInt(orderId))
                 <h2 class="section-title">Order Summary</h2>
 
                 <ul class="order-list">
-                    <li v-for="orderItem in order?.items" :key="orderItem.productId" class="order-item">
+                    <li v-for="orderItem in orderStore.currentOrder?.orderItems" :key="orderItem.productId"
+                        class="order-item">
                         <div class="order-item-image-wrap">
-                            <img :src="productStore.getProductById(orderItem.productId)?.image"
-                                :alt="productStore.getProductById(orderItem.productId)?.name"
+                            <img :src="orderItem.product.image || IMAGE" :alt="orderItem.product.name"
                                 class="order-item-image" />
                             <span class="order-item-qty">{{ orderItem.quantity }}</span>
                         </div>
 
                         <div class="order-item-info">
-                            <p class="order-item-name">
-                                {{ productStore.getProductById(orderItem.productId)?.name }}
-                            </p>
-                            <p class="order-item-unit">
-                                ${{ productStore.getProductById(orderItem.productId)?.price }} each
-                            </p>
+                            <p class="order-item-name">{{ orderItem.product.name }}</p>
+                            <p class="order-item-unit">${{ orderItem.product.price }} each</p>
                         </div>
 
                         <p class="order-item-price">
-                            ${{
-                                (
-                                    (productStore.getProductById(orderItem.productId)?.price ?? 0) *
-                                    orderItem.quantity
-                                ).toFixed(2)
-                            }}
+                            ${{ (orderItem.product.price * orderItem.quantity).toFixed(2) }}
                         </p>
                     </li>
                 </ul>
 
                 <div class="order-total">
                     <span class="order-total-label">Total</span>
-                    <span class="order-total-value">${{ order?.total.toFixed(2) }}</span>
+                    <span class="order-total-value">${{ orderStore.currentOrder?.total.toFixed(2) }}</span>
                 </div>
             </div>
 
@@ -211,7 +201,7 @@ const order = orderStore.getOrderById(parseInt(orderId))
 .order-item-image {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     border-radius: 8px;
     background: var(--color-mint-50);
     border: 1px solid var(--color-mint-100);

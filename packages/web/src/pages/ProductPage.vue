@@ -2,13 +2,15 @@
 import { useProductStore } from '@/stores/product'
 import { useCartStore } from '@/stores/cart'
 import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+import { IMAGE } from '@/mock/product'
 
 const route = useRoute()
 const productStore = useProductStore()
 const cartStore = useCartStore()
 
-const productId = parseInt(route.params.id as string)
-const product = productStore.getProductById(productId)
+const productId = route.params.id as string
+const product = computed(() => productStore.getProductById(productId))
 </script>
 
 <template>
@@ -19,7 +21,7 @@ const product = productStore.getProductById(productId)
       <div v-if="product" class="product-layout">
         <!-- Image -->
         <div class="product-image-wrap">
-          <img :src="product.image" :alt="product.name" class="product-image" />
+          <img :src="product.image || IMAGE" :alt="product.name" class="product-image" />
         </div>
 
         <!-- Details -->
@@ -99,7 +101,7 @@ const product = productStore.getProductById(productId)
 .product-image {
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* Details */

@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import type { Product } from '@/types'
+import { IMAGE } from '@/mock/product';
+import type { ApiProduct } from '@/services/api'
 
 defineProps<{
-    product: Product
+    product: ApiProduct
 }>()
 </script>
 
 <template>
     <router-link :to="`/product/${product.id}`" class="product-card">
         <div class="product-image-wrap">
-            <img :src="product.image" :alt="product.name" class="product-image" />
+            <img :src="product.image || IMAGE" :alt="product.name" class="product-image" />
         </div>
         <div class="product-info">
             <h3 class="product-name">{{ product.name }}</h3>
@@ -52,7 +53,7 @@ defineProps<{
 .product-image {
     width: 100%;
     aspect-ratio: 4/3;
-    object-fit: contain;
+    object-fit: cover;
     transition: transform 0.4s ease;
 }
 

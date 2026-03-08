@@ -15,8 +15,11 @@ const productStore = useProductStore()
         <p class="page-subtitle">{{ productStore.products.length }} products available</p>
       </div>
 
+      <p v-if="productStore.loading">Loading...</p>
+      <p v-else-if="productStore.error">{{ productStore.error }}</p>
+
       <!-- Product grid -->
-      <ul class="product-grid">
+      <ul v-else class="product-grid">
         <li v-for="product in productStore.products" :key="product.id">
           <ProductCard :product="product" />
         </li>
