@@ -107,6 +107,11 @@ export const api = {
     request<ApiUser>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
   getMe: () => request<ApiUser>('/auth/me'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ success: boolean }>('/auth/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 
   // Products
   getProducts: (page = 1, search?: string) => {

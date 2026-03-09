@@ -30,7 +30,7 @@ const handleLogout = async () => {
         <template v-if="authStore.user">
           <span class="user-email">{{ authStore.user.email }}</span>
           <router-link to="/wishlist" class="nav-link">Wishlist</router-link>
-          <router-link to="/orders" class="nav-link">My Orders</router-link>
+          <router-link to="/profile" class="nav-link">Profile</router-link>
           <button class="nav-btn" @click="handleLogout">Sign out</button>
         </template>
         <template v-else>

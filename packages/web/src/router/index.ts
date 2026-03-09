@@ -5,7 +5,7 @@ import LoginPage from '@/pages/LoginPage.vue'
 import ProductPage from '@/pages/ProductPage.vue'
 import RegisterPage from '@/pages/RegisterPage.vue'
 import SuccessPage from '@/pages/SuccessPage.vue'
-import OrdersPage from '@/pages/OrdersPage.vue'
+import ProfilePage from '@/pages/ProfilePage.vue'
 import OrderDetailPage from '@/pages/OrderDetailPage.vue'
 import WishlistPage from '@/pages/WishlistPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -36,13 +36,17 @@ const router = createRouter({
       component: SuccessPage,
     },
     {
-      path: '/orders',
-      component: OrdersPage,
+      path: '/profile',
+      redirect: '/profile/info',
+    },
+    {
+      path: '/profile/orders/:id',
+      component: OrderDetailPage,
       meta: { requiresAuth: true },
     },
     {
-      path: '/orders/:id',
-      component: OrderDetailPage,
+      path: '/profile/:tab',
+      component: ProfilePage,
       meta: { requiresAuth: true },
     },
     {

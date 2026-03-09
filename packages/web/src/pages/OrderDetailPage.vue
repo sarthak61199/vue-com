@@ -15,7 +15,7 @@ onMounted(async () => {
 <template>
   <main class="page">
     <div class="page-inner">
-      <router-link to="/orders" class="back-link">← My Orders</router-link>
+      <router-link to="/profile/orders" class="back-link">← My Orders</router-link>
 
       <div v-if="orderStore.loading" class="status-msg">Loading order...</div>
       <div v-else-if="orderStore.error" class="status-msg error-msg">{{ orderStore.error }}</div>

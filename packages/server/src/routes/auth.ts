@@ -69,4 +69,22 @@ auth.get('/me', requireAuth, async (c) => {
   return c.json(user)
 })
 
+auth.patch('/password', requireAuth, async (c) => {
+  const body = await c.req.json<{ currentPassword?: string; newPassword?: string }>()
+  if (!body.currentPassword || !body.newPassword) {
+    return c.json({ error: 'currentPassword and newPassword are required' }, 400)
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: c.get('userId') } })
+  if (!user) return c.json({ error: 'User not found' }, 404)
+
+  const valid = await bcrypt.compare(body.currentPassword, user.passwordHash)
+  if (!valid) return c.json({ error: 'Current password is incorrect' }, 401)
+
+  const passwordHash = await bcrypt.hash(body.newPassword, 12)
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } })
+
+  return c.json({ success: true })
+})
+
 export default auth
