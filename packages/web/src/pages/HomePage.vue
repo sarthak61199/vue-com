@@ -6,6 +6,8 @@ import { useDebounce } from '@/composables/useDebounce'
 import ProductCard from '@/components/ProductCard.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import BaseButton from '@/components/BaseButton.vue'
+import BaseInput from '@/components/BaseInput.vue'
 
 const PAGE_SIZE = 9
 const route = useRoute()
@@ -58,8 +60,8 @@ const clearSearch = () => {
 
       <!-- Search bar -->
       <div class="search-bar">
-        <input v-model="searchInput" type="search" placeholder="Search products..." class="search-input" />
-        <button :disabled="!currentSearch" class="clear-btn" @click="clearSearch">Clear</button>
+        <BaseInput v-model="searchInput" type="search" placeholder="Search products..." variant="ghost" />
+        <BaseButton variant="ghost" size="sm" :disabled="!currentSearch" @click="clearSearch">Clear</BaseButton>
       </div>
 
       <p v-if="productStore.loading">Loading...</p>
@@ -135,43 +137,6 @@ const clearSearch = () => {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-}
-
-.search-input {
-  flex: 1;
-  padding: 0.625rem 0.875rem;
-  border: 1.5px solid var(--color-stone);
-  border-radius: 6px;
-  font-size: 0.9375rem;
-  color: var(--color-charcoal);
-  background: transparent;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.search-input:focus {
-  border-color: var(--color-mint-dark);
-}
-
-.clear-btn {
-  padding: 0.625rem 1rem;
-  border: 1.5px solid var(--color-stone);
-  border-radius: 6px;
-  background: transparent;
-  font-size: 0.875rem;
-  color: var(--color-stone);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-.clear-btn:hover {
-  border-color: var(--color-charcoal);
-  color: var(--color-charcoal);
-}
-
-.clear-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
 }
 
 /* Grid */

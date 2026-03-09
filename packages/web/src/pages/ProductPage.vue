@@ -7,6 +7,7 @@ import { IMAGE } from '@/constants'
 import QuantityStepper from '@/components/QuantityStepper.vue'
 import StarRating from '@/components/StarRating.vue'
 import ProductReviews from '@/components/ProductReviews.vue'
+import BaseButton from '@/components/BaseButton.vue'
 
 const route = useRoute()
 const cartStore = useCartStore()
@@ -58,9 +59,9 @@ async function refreshProduct() {
           <div class="qty-wrap">
             <QuantityStepper :quantity="quantity" @change="quantity = $event" />
           </div>
-          <button class="add-to-cart-btn" @click="cartStore.addToCart({ productId, quantity })">
+          <BaseButton variant="dark" size="md" style="align-self: flex-start" @click="cartStore.addToCart({ productId, quantity })">
             Add to Cart
-          </button>
+          </BaseButton>
         </div>
       </div>
 
@@ -185,35 +186,6 @@ async function refreshProduct() {
   color: var(--color-stone);
   line-height: 1.7;
   margin-bottom: 2.25rem;
-}
-
-.add-to-cart-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: flex-start;
-  padding: 0.875rem 2rem;
-  background: var(--color-charcoal);
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.15s ease;
-}
-
-.add-to-cart-btn:hover {
-  background: var(--color-mint-dark);
-  transform: translateY(-1px);
-}
-
-.add-to-cart-btn:active {
-  transform: translateY(0);
 }
 
 /* Not found */

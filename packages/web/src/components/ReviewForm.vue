@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { type ApiReview } from '@/services/api'
+import BaseButton from '@/components/BaseButton.vue'
 
 const props = defineProps<{
   existingReview: ApiReview | null
@@ -45,9 +46,9 @@ function handleSubmit() {
     />
 
     <div class="form-actions">
-      <button class="submit-btn" :disabled="submitting" @click="handleSubmit">
+      <BaseButton variant="dark" size="sm" :loading="submitting" @click="handleSubmit">
         {{ submitting ? 'Saving…' : existingReview ? 'Update review' : 'Submit review' }}
-      </button>
+      </BaseButton>
       <span v-if="submitSuccess" class="success-msg">Review saved!</span>
       <span v-if="submitError" class="error-msg">{{ submitError }}</span>
     </div>
@@ -122,29 +123,6 @@ function handleSubmit() {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.submit-btn {
-  padding: 0.625rem 1.5rem;
-  background: var(--color-charcoal);
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: var(--color-mint-dark);
-}
-
-.submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .success-msg {

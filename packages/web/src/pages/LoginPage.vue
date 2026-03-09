@@ -2,6 +2,8 @@
 import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import BaseButton from '@/components/BaseButton.vue'
+import BaseInput from '@/components/BaseInput.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -33,22 +35,21 @@ const handleSubmit = async () => {
         <form class="form" @submit.prevent="handleSubmit">
           <div class="field">
             <label class="field-label" for="email">Email</label>
-            <input id="email" v-model.trim="email" type="email" class="field-input" placeholder="you@example.com"
+            <BaseInput id="email" v-model.trim="email" type="email" placeholder="you@example.com"
               autocomplete="email" required />
           </div>
 
           <div class="field">
             <label class="field-label" for="password">Password</label>
-            <input id="password" v-model.trim="password" type="password" class="field-input" placeholder="••••••••"
+            <BaseInput id="password" v-model.trim="password" type="password" placeholder="••••••••"
               autocomplete="current-password" required />
           </div>
 
           <p v-if="authStore.error" class="error-msg">{{ authStore.error }}</p>
 
-          <button type="submit" class="submit-btn" :disabled="authStore.loading">
-            <span v-if="authStore.loading" class="spinner" />
-            <span>{{ authStore.loading ? 'Signing in…' : 'Sign in' }}</span>
-          </button>
+          <BaseButton type="submit" size="lg" full-width :loading="authStore.loading" style="margin-top: 0.25rem">
+            {{ authStore.loading ? 'Signing in…' : 'Sign in' }}
+          </BaseButton>
         </form>
 
         <p class="switch-text">
@@ -109,7 +110,6 @@ const handleSubmit = async () => {
   line-height: 1;
 }
 
-/* Form */
 .form {
   display: flex;
   flex-direction: column;
@@ -131,92 +131,12 @@ const handleSubmit = async () => {
   color: var(--color-stone);
 }
 
-.field-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  font-family: 'Titillium Web', sans-serif;
-  font-size: 1rem;
-  color: var(--color-charcoal);
-  background: var(--color-cream);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.field-input::placeholder {
-  color: var(--color-stone-light);
-}
-
-.field-input:focus {
-  border-color: var(--color-mint);
-  box-shadow: 0 0 0 3px var(--color-mint-50);
-  background: white;
-}
-
 .error-msg {
   font-size: 0.875rem;
   color: #d94f4f;
   font-weight: 700;
 }
 
-.submit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.9375rem;
-  background: var(--color-mint);
-  color: var(--color-charcoal);
-  font-family: 'Titillium Web', sans-serif;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.15s ease;
-  margin-top: 0.25rem;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: var(--color-mint-dark);
-  color: white;
-  transform: translateY(-1px);
-}
-
-.submit-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(26, 32, 40, 0.2);
-  border-top-color: var(--color-charcoal);
-  border-radius: 50%;
-  animation: spin 0.65s linear infinite;
-  flex-shrink: 0;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Switch */
 .switch-text {
   font-size: 0.875rem;
   color: var(--color-stone);

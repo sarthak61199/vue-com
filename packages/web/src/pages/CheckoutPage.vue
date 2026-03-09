@@ -4,6 +4,7 @@ import { useOrderStore } from '@/stores/order'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
+import BaseButton from '@/components/BaseButton.vue'
 
 const orderStore = useOrderStore()
 const cartStore = useCartStore()
@@ -114,9 +115,9 @@ const createOrder = async () => {
                         </div>
 
                         <p v-if="orderStore.error" class="order-error">{{ orderStore.error }}</p>
-                        <button class="place-order-btn" :disabled="orderStore.loading" @click="createOrder">
+                        <BaseButton size="lg" full-width :loading="orderStore.loading" @click="createOrder">
                             {{ orderStore.loading ? 'Placing order…' : 'Place Order' }}
-                        </button>
+                        </BaseButton>
                     </section>
                 </div>
             </div>
@@ -376,40 +377,6 @@ const createOrder = async () => {
     font-weight: 700;
     color: var(--color-charcoal);
     letter-spacing: -0.03em;
-}
-
-/* CTA */
-.place-order-btn {
-    width: 100%;
-    padding: 0.9375rem 2rem;
-    background: var(--color-mint);
-    color: var(--color-charcoal);
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition:
-        background 0.2s ease,
-        transform 0.15s ease;
-}
-
-.place-order-btn:hover {
-    background: var(--color-mint-dark);
-    color: white;
-    transform: translateY(-1px);
-}
-
-.place-order-btn:active {
-    transform: translateY(0);
-}
-
-.place-order-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
 }
 
 .order-error {

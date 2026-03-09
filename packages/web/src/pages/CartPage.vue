@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
 import QuantityStepper from '@/components/QuantityStepper.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import BaseButton from '@/components/BaseButton.vue'
 
 const cartStore = useCartStore()
+const router = useRouter()
 
 const cartTotal = computed(() =>
   cartStore.cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
@@ -48,9 +51,9 @@ const cartTotal = computed(() =>
 
             <div class="cart-item-right">
               <p class="cart-item-price">${{ cartItem.product.price * cartItem.quantity }}</p>
-              <button class="remove-btn" @click="cartStore.removeFromCart(cartItem.productId)">
+              <BaseButton variant="text" size="sm" @click="cartStore.removeFromCart(cartItem.productId)">
                 Remove
-              </button>
+              </BaseButton>
             </div>
           </li>
         </ul>
@@ -61,7 +64,9 @@ const cartTotal = computed(() =>
             <span class="cart-total-label">Total</span>
             <span class="cart-total-value">${{ cartTotal }}</span>
           </div>
-          <router-link to="/checkout" class="checkout-btn">Proceed to Checkout</router-link>
+          <BaseButton variant="primary" size="md" @click="router.push('/checkout')">
+            Proceed to Checkout
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -101,7 +106,6 @@ const cartTotal = computed(() =>
   letter-spacing: -0.04em;
   line-height: 1;
 }
-
 
 /* Cart list */
 .cart-list {
@@ -144,12 +148,6 @@ const cartTotal = computed(() =>
   margin-bottom: 0.25rem;
 }
 
-.cart-item-qty {
-  font-size: 0.875rem;
-  color: var(--color-stone);
-}
-
-
 .cart-item-right {
   display: flex;
   flex-direction: column;
@@ -161,23 +159,6 @@ const cartTotal = computed(() =>
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-charcoal);
-}
-
-.remove-btn {
-  background: none;
-  border: none;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-stone-light);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s ease;
-}
-
-.remove-btn:hover {
-  color: #e05555;
 }
 
 /* Summary */
@@ -211,31 +192,5 @@ const cartTotal = computed(() =>
   font-weight: 700;
   color: var(--color-charcoal);
   letter-spacing: -0.03em;
-}
-
-.checkout-btn {
-  padding: 0.875rem 2rem;
-  background: var(--color-mint);
-  color: var(--color-charcoal);
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.15s ease;
-}
-
-.checkout-btn:hover {
-  background: var(--color-mint-dark);
-  color: white;
-  transform: translateY(-1px);
-}
-
-.checkout-btn:active {
-  transform: translateY(0);
 }
 </style>
