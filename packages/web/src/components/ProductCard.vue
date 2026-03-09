@@ -2,6 +2,7 @@
 import { IMAGE } from '@/constants';
 import type { ApiProduct } from '@/services/api'
 import StarRating from '@/components/StarRating.vue'
+import WishlistButton from '@/components/WishlistButton.vue'
 
 defineProps<{
     product: ApiProduct
@@ -12,6 +13,7 @@ defineProps<{
     <router-link :to="`/product/${product.id}`" class="product-card">
         <div class="product-image-wrap">
             <img :src="product.image || IMAGE" :alt="product.name" class="product-image" />
+            <WishlistButton :product-id="product.id" class="wishlist-overlay" />
         </div>
         <div class="product-info">
             <div class="product-name-row">
@@ -55,8 +57,15 @@ defineProps<{
 }
 
 .product-image-wrap {
+    position: relative;
     overflow: hidden;
     background: var(--color-mint-50);
+}
+
+.wishlist-overlay {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
 }
 
 .product-image {

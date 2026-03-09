@@ -7,6 +7,7 @@ import RegisterPage from '@/pages/RegisterPage.vue'
 import SuccessPage from '@/pages/SuccessPage.vue'
 import OrdersPage from '@/pages/OrdersPage.vue'
 import OrderDetailPage from '@/pages/OrderDetailPage.vue'
+import WishlistPage from '@/pages/WishlistPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -42,6 +43,11 @@ const router = createRouter({
     {
       path: '/orders/:id',
       component: OrderDetailPage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/wishlist',
+      component: WishlistPage,
       meta: { requiresAuth: true },
     },
     {

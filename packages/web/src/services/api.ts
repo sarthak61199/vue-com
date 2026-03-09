@@ -81,6 +81,13 @@ export interface ApiOrderItem {
   product: ApiProduct
 }
 
+export interface ApiWishlistItem {
+  userId: string
+  productId: string
+  createdAt: string
+  product: ApiProduct
+}
+
 export interface ApiOrder {
   id: string
   total: number
@@ -135,6 +142,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ productId, rating, body }),
     }),
+
+  // Wishlist
+  getWishlist: () => request<ApiWishlistItem[]>('/wishlist'),
+  addToWishlist: (productId: string) =>
+    request<ApiWishlistItem>('/wishlist', { method: 'POST', body: JSON.stringify({ productId }) }),
+  removeFromWishlist: (productId: string) =>
+    request<{ success: boolean }>(`/wishlist/${productId}`, { method: 'DELETE' }),
 
   // Orders
   createOrder: (cartId: string) =>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
+import { useWishlistStore } from '@/stores/wishlist'
 import { useRoute } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { api, type ApiProduct } from '@/services/api'
@@ -8,9 +10,12 @@ import QuantityStepper from '@/components/QuantityStepper.vue'
 import StarRating from '@/components/StarRating.vue'
 import ProductReviews from '@/components/ProductReviews.vue'
 import BaseButton from '@/components/BaseButton.vue'
+import WishlistButton from '@/components/WishlistButton.vue'
 
 const route = useRoute()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
+const wishlistStore = useWishlistStore()
 
 const productId = route.params.id as string
 const product = ref<ApiProduct | null>(null)
@@ -20,7 +25,10 @@ const quantity = ref(1)
 
 onMounted(async () => {
   try {
-    product.value = await api.getProductById(productId)
+    const fetches: Promise<unknown>[] = [api.getProductById(productId)]
+    if (authStore.user) fetches.push(wishlistStore.fetchWishlist())
+    const [p] = await Promise.all(fetches)
+    product.value = p as ApiProduct
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -59,9 +67,12 @@ async function refreshProduct() {
           <div class="qty-wrap">
             <QuantityStepper :quantity="quantity" @change="quantity = $event" />
           </div>
-          <BaseButton variant="dark" size="md" style="align-self: flex-start" @click="cartStore.addToCart({ productId, quantity })">
-            Add to Cart
-          </BaseButton>
+          <div class="actions-row">
+            <BaseButton variant="dark" size="md" @click="cartStore.addToCart({ productId, quantity })">
+              Add to Cart
+            </BaseButton>
+            <WishlistButton :product-id="productId" />
+          </div>
         </div>
       </div>
 
@@ -186,6 +197,13 @@ async function refreshProduct() {
   color: var(--color-stone);
   line-height: 1.7;
   margin-bottom: 2.25rem;
+}
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  align-self: flex-start;
 }
 
 /* Not found */
