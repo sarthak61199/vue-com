@@ -3,15 +3,18 @@ import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrderStore } from '@/stores/order'
+import { useAddressStore } from '@/stores/address'
 import { api } from '@/services/api'
 import EmptyState from '@/components/EmptyState.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
+import AddressForm from '@/components/AddressForm.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const orderStore = useOrderStore()
+const addressStore = useAddressStore()
 
 const tab = computed(() => route.params.tab as string)
 
@@ -53,14 +56,22 @@ const submitPasswordChange = async () => {
 // Orders
 const ordersFetched = ref(false)
 
-const fetchIfOrders = (t: string) => {
+// Addresses
+const addressesFetched = ref(false)
+const showAddressForm = ref(false)
+
+const fetchIfNeeded = (t: string) => {
   if (t === 'orders' && !ordersFetched.value) {
     ordersFetched.value = true
     orderStore.getOrders()
   }
+  if (t === 'addresses' && !addressesFetched.value) {
+    addressesFetched.value = true
+    addressStore.fetchAddresses()
+  }
 }
 
-watch(tab, fetchIfOrders, { immediate: true })
+watch(tab, fetchIfNeeded, { immediate: true })
 
 const memberSince = computed(() => {
   if (!authStore.user?.createdAt) return ''
@@ -100,6 +111,13 @@ const memberSince = computed(() => {
               @click="navigateTo('orders')"
             >
               Orders
+            </button>
+            <button
+              class="tab-btn"
+              :class="{ active: tab === 'addresses' }"
+              @click="navigateTo('addresses')"
+            >
+              Addresses
             </button>
           </nav>
         </aside>
@@ -167,6 +185,59 @@ const memberSince = computed(() => {
                 {{ pwLoading ? 'Updating…' : 'Update Password' }}
               </BaseButton>
             </form>
+          </template>
+
+          <!-- Addresses -->
+          <template v-else-if="tab === 'addresses'">
+            <div class="section-header section-header--row">
+              <div>
+                <p class="section-label">Delivery</p>
+                <h1 class="section-title">My Addresses</h1>
+              </div>
+              <BaseButton
+                v-if="!showAddressForm && !addressStore.loading"
+                variant="dark"
+                size="sm"
+                @click="showAddressForm = true"
+              >
+                + Add New
+              </BaseButton>
+            </div>
+
+            <div v-if="addressStore.loading" class="loading-msg">Loading addresses...</div>
+
+            <template v-else>
+              <EmptyState
+                v-if="addressStore.items.length === 0 && !showAddressForm"
+                heading="No saved addresses"
+                message="Add an address to speed up checkout."
+                link-to="/checkout"
+                link-text="Go to checkout →"
+              />
+
+              <ul v-if="addressStore.items.length > 0" class="addresses-list">
+                <li v-for="addr in addressStore.items" :key="addr.id" class="address-card">
+                  <div class="address-card-body">
+                    <div>
+                      <p v-if="addr.label" class="address-card-label">{{ addr.label }}</p>
+                      <p class="address-card-line">{{ addr.line1 }}<span v-if="addr.line2">, {{ addr.line2 }}</span></p>
+                      <p class="address-card-line">{{ addr.city }}, {{ addr.state }} {{ addr.zip }}</p>
+                      <p class="address-card-line address-card-country">{{ addr.country }}</p>
+                    </div>
+                    <BaseButton variant="ghost" size="sm" @click="addressStore.deleteAddress(addr.id)">
+                      Remove
+                    </BaseButton>
+                  </div>
+                </li>
+              </ul>
+
+              <div v-if="showAddressForm" class="address-form-wrap">
+                <AddressForm
+                  @saved="showAddressForm = false"
+                  @cancel="showAddressForm = false"
+                />
+              </div>
+            </template>
           </template>
 
           <!-- Orders -->
@@ -296,6 +367,12 @@ const memberSince = computed(() => {
 
 .section-header {
   margin-bottom: 2rem;
+}
+
+.section-header--row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 .section-label {
@@ -492,5 +569,60 @@ const memberSince = computed(() => {
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--color-charcoal);
+}
+
+/* Addresses */
+.addresses-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.address-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.address-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+}
+
+.address-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-mint-dark);
+  margin-bottom: 0.375rem;
+}
+
+.address-card-line {
+  font-size: 0.9375rem;
+  color: var(--color-charcoal);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.address-card-country {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-stone);
+}
+
+.address-form-wrap {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  padding: 1.75rem;
+  max-width: 560px;
 }
 </style>

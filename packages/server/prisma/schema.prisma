@@ -33,6 +33,7 @@ model User {
   orders        Order[]
   reviews       Review[]
   wishlistItems WishlistItem[]
+  addresses     Address[]
 
   @@map("users")
 }
@@ -53,6 +54,8 @@ model Order {
   total      Float
   userId     String
   user       User        @relation(fields: [userId], references: [id])
+  addressId  String?
+  address    Address?    @relation(fields: [addressId], references: [id])
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   orderItems OrderItem[]
@@ -108,6 +111,24 @@ model Review {
   @@unique([userId, productId])
   @@index([productId])
   @@map("reviews")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  label     String?
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  zip       String
+  country   String   @default("US")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  orders    Order[]
+
+  @@index([userId])
+  @@map("addresses")
 }
 
 model WishlistItem {

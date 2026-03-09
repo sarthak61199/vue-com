@@ -8,7 +8,7 @@ const orders = new Hono<AuthEnv>()
 // Place an order from a cart
 orders.post('/', requireAuth, async (c) => {
   const userId = c.get('userId')
-  const body = await c.req.json<{ cartId: string }>()
+  const body = await c.req.json<{ cartId: string; addressId?: string }>()
   if (!body.cartId) return c.json({ error: 'cartId is required' }, 400)
 
   const cart = await prisma.cart.findUnique({
@@ -29,6 +29,7 @@ orders.post('/', requireAuth, async (c) => {
       data: {
         total,
         userId,
+        addressId: body.addressId ?? null,
         orderItems: {
           create: cart.cartItems.map((item) => ({
             productId: item.productId,
@@ -38,6 +39,7 @@ orders.post('/', requireAuth, async (c) => {
       },
       include: {
         orderItems: { include: { product: true } },
+        address: true,
       },
     })
 
@@ -57,6 +59,7 @@ orders.get('/:id', requireAuth, async (c) => {
     where: { id },
     include: {
       orderItems: { include: { product: true } },
+      address: true,
     },
   })
   if (!order) return c.json({ error: 'Order not found' }, 404)
@@ -71,6 +74,7 @@ orders.get('/', requireAuth, async (c) => {
     where: { userId },
     include: {
       orderItems: { include: { product: true } },
+      address: true,
     },
     orderBy: { createdAt: 'desc' },
   })

@@ -8,11 +8,11 @@ export const useOrderStore = defineStore('order', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const createOrder = async (cartId: string) => {
+  const createOrder = async (cartId: string, addressId?: string) => {
     loading.value = true
     error.value = null
     try {
-      currentOrder.value = await api.createOrder(cartId)
+      currentOrder.value = await api.createOrder(cartId, addressId)
       return currentOrder.value.id
     } catch (e) {
       error.value = (e as Error).message

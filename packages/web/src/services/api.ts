@@ -88,10 +88,25 @@ export interface ApiWishlistItem {
   product: ApiProduct
 }
 
+export interface ApiAddress {
+  id: string
+  userId: string
+  label: string | null
+  line1: string
+  line2: string | null
+  city: string
+  state: string
+  zip: string
+  country: string
+  createdAt: string
+}
+
 export interface ApiOrder {
   id: string
   total: number
   userId: string
+  addressId: string | null
+  address?: ApiAddress | null
   createdAt: string
   updatedAt: string
   orderItems: ApiOrderItem[]
@@ -156,11 +171,18 @@ export const api = {
     request<{ success: boolean }>(`/wishlist/${productId}`, { method: 'DELETE' }),
 
   // Orders
-  createOrder: (cartId: string) =>
+  createOrder: (cartId: string, addressId?: string) =>
     request<ApiOrder>('/orders', {
       method: 'POST',
-      body: JSON.stringify({ cartId }),
+      body: JSON.stringify({ cartId, addressId }),
     }),
   getOrderById: (orderId: string) => request<ApiOrder>(`/orders/${orderId}`),
   getOrders: () => request<ApiOrder[]>('/orders'),
+
+  // Addresses
+  getAddresses: () => request<ApiAddress[]>('/addresses'),
+  createAddress: (data: Omit<ApiAddress, 'id' | 'userId' | 'createdAt'>) =>
+    request<ApiAddress>('/addresses', { method: 'POST', body: JSON.stringify(data) }),
+  deleteAddress: (id: string) =>
+    request<{ success: boolean }>(`/addresses/${id}`, { method: 'DELETE' }),
 }

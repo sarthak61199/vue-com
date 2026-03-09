@@ -1,21 +1,33 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { useOrderStore } from '@/stores/order'
-import { computed, onMounted, ref } from 'vue'
+import { useAddressStore } from '@/stores/address'
+import { computed, onMounted, ref, watch } from 'vue'
+import type { ApiAddress } from '@/services/api'
 import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
 import BaseButton from '@/components/BaseButton.vue'
+import AddressForm from '@/components/AddressForm.vue'
 
 const orderStore = useOrderStore()
 const cartStore = useCartStore()
+const addressStore = useAddressStore()
 const router = useRouter()
 
-onMounted(() => {
+onMounted(async () => {
     if (cartStore.cartItems.length === 0) {
         router.push('/')
+        return
+    }
+    await addressStore.fetchAddresses()
+    if (addressStore.items.length > 0) {
+        selectedAddressId.value = addressStore.items[0]!.id
+    } else {
+        showNewAddressForm.value = true
     }
 })
 
+// --- Shipping ---
 const selectedShipping = ref('standard')
 
 const shippingOptions = [
@@ -28,6 +40,34 @@ const shippingCost = computed(
     () => shippingOptions.find((o) => o.id === selectedShipping.value)?.price ?? 0,
 )
 
+// --- Address ---
+const selectedAddressId = ref<string | null>(null)
+const showNewAddressForm = ref(false)
+
+const selectAddress = (id: string) => {
+    selectedAddressId.value = id
+    showNewAddressForm.value = false
+}
+
+const selectNewAddress = () => {
+    selectedAddressId.value = null
+    showNewAddressForm.value = true
+}
+
+// when AddressForm saves a new address, auto-select it and close the form
+const onAddressSaved = (address: ApiAddress) => {
+    selectedAddressId.value = address.id
+    showNewAddressForm.value = false
+}
+
+// auto-select first when addresses load
+watch(() => addressStore.items, (items) => {
+    if (items.length > 0 && selectedAddressId.value === null && !showNewAddressForm.value) {
+        selectedAddressId.value = items[0]!.id
+    }
+})
+
+// --- Order ---
 const cartSubtotal = computed(() =>
     cartStore.cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
 )
@@ -35,7 +75,7 @@ const cartSubtotal = computed(() =>
 const orderTotal = computed(() => cartSubtotal.value + shippingCost.value)
 
 const createOrder = async () => {
-    const orderId = await orderStore.createOrder(cartStore.cartId!)
+    const orderId = await orderStore.createOrder(cartStore.cartId!, selectedAddressId.value ?? undefined)
     if (!orderId) return
 
     cartStore.clearCart()
@@ -52,8 +92,70 @@ const createOrder = async () => {
             </div>
 
             <div class="checkout-layout">
-                <!-- Left: Shipping -->
+                <!-- Left: Address + Shipping -->
                 <div class="checkout-left">
+                    <!-- Delivery Address -->
+                    <section class="section">
+                        <h2 class="section-title">Delivery Address</h2>
+
+                        <div v-if="addressStore.loading" class="address-loading">Loading addresses…</div>
+
+                        <div v-else class="address-options">
+                            <!-- Saved addresses -->
+                            <label
+                                v-for="addr in addressStore.items"
+                                :key="addr.id"
+                                class="address-option"
+                                :class="{ 'is-selected': selectedAddressId === addr.id && !showNewAddressForm }"
+                                @click="selectAddress(addr.id)"
+                            >
+                                <input
+                                    type="radio"
+                                    name="address"
+                                    :value="addr.id"
+                                    :checked="selectedAddressId === addr.id && !showNewAddressForm"
+                                    class="address-radio"
+                                />
+                                <div class="address-option-body">
+                                    <span class="shipping-dot"></span>
+                                    <div class="address-text">
+                                        <p v-if="addr.label" class="address-label">{{ addr.label }}</p>
+                                        <p class="address-line">{{ addr.line1 }}<span v-if="addr.line2">, {{ addr.line2 }}</span></p>
+                                        <p class="address-line">{{ addr.city }}, {{ addr.state }} {{ addr.zip }}</p>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Add new address option -->
+                            <label
+                                class="address-option address-option--new"
+                                :class="{ 'is-selected': showNewAddressForm }"
+                                @click="selectNewAddress"
+                            >
+                                <input
+                                    type="radio"
+                                    name="address"
+                                    value="new"
+                                    :checked="showNewAddressForm"
+                                    class="address-radio"
+                                />
+                                <div class="address-option-body">
+                                    <span class="shipping-dot"></span>
+                                    <span class="address-new-label">+ Add new address</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- New address form -->
+                        <div v-if="showNewAddressForm" class="new-address-form">
+                            <AddressForm
+                                @saved="onAddressSaved"
+                                @cancel="selectedAddressId && (showNewAddressForm = false)"
+                            />
+                        </div>
+                    </section>
+
+                    <!-- Shipping Method -->
                     <section class="section">
                         <h2 class="section-title">Shipping Method</h2>
                         <div class="shipping-options">
@@ -174,6 +276,12 @@ const createOrder = async () => {
     }
 }
 
+.checkout-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
 /* Sections */
 .section {
     background: white;
@@ -190,6 +298,78 @@ const createOrder = async () => {
     text-transform: uppercase;
     color: var(--color-stone);
     margin-bottom: 1.25rem;
+}
+
+/* Address options */
+.address-loading {
+    font-size: 0.875rem;
+    color: var(--color-stone);
+    padding: 0.5rem 0;
+}
+
+.address-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.address-option {
+    border: 1.5px solid var(--color-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+.address-option.is-selected {
+    border-color: var(--color-mint);
+    background: var(--color-mint-50);
+}
+
+.address-radio {
+    display: none;
+}
+
+.address-option-body {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+}
+
+.address-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.address-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-charcoal);
+}
+
+.address-line {
+    font-size: 0.8125rem;
+    color: var(--color-stone);
+}
+
+.address-new-label {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-charcoal);
+}
+
+.address-option--new .address-option-body {
+    padding-block: 1rem;
+}
+
+/* New address form */
+.new-address-form {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
 }
 
 /* Shipping options */
@@ -241,10 +421,12 @@ const createOrder = async () => {
     transition: border-color 0.2s ease;
 }
 
+.address-option.is-selected .shipping-dot,
 .shipping-option.is-selected .shipping-dot {
     border-color: var(--color-mint-dark);
 }
 
+.address-option.is-selected .shipping-dot::after,
 .shipping-option.is-selected .shipping-dot::after {
     content: '';
     position: absolute;
