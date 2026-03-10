@@ -43,10 +43,10 @@ Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnl
 
 ### Data layer (web)
 
-All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiProductPage`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`, `ApiUser`, `ApiReview`, `ApiReviewsResponse`, `ApiEligibilityResponse`, `ApiWishlistItem`, `ApiAddress`). Stores call the server API directly:
+All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, `ApiProductPage`, `ApiCategory`, `ProductFilters`, `ApiCart`, `ApiCartItem`, `ApiOrder`, `ApiOrderItem`, `ApiUser`, `ApiReview`, `ApiReviewsResponse`, `ApiEligibilityResponse`, `ApiWishlistItem`, `ApiAddress`). Stores call the server API directly:
 
 - **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
-- **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `fetchProducts(page, search?)`. No auto-fetch on creation; `HomePage` drives fetching based on URL `?page` and `?search` params.
+- **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `categories`, `fetchProducts(filters: ProductFilters)`, `fetchCategories()`. No auto-fetch on creation; `HomePage` drives fetching. `fetchCategories()` is idempotent (skips if already loaded).
 - **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`
 - **`useOrderStore`** — exposes `createOrder(cartId, addressId?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
 - **`useWishlistStore`** — no auto-init; exposes `items`, `wishlistedIds` (computed `Set<string>` for O(1) lookups), `fetchWishlist()`, `toggleWishlist(productId)`. `WishlistButton` lazy-fetches the wishlist on first click (tracked per-component via a `fetched` ref) so guest page loads incur no auth calls.
@@ -54,7 +54,9 @@ All API types and the `api` object live in `src/services/api.ts` (`ApiProduct`, 
 
 `ProfilePage` (`/profile/:tab`) is the user hub with four tabs: **info** (read-only email + join date), **password** (change password form using `api.changePassword()`), **orders** (order list, lazy-fetched only when the tab is first visited via `watch` on `route.params.tab`), and **addresses** (saved delivery addresses, also lazy-fetched on first visit).
 
-`ApiProduct` includes optional `averageRating?: number | null` and `reviewCount?: number` fields, computed server-side on every product endpoint (via `groupBy` for the list, `aggregate` for single). Both product endpoints always return these fields.
+`ApiProduct` includes `categoryId: string | null`, optional `category?: ApiCategory | null`, and optional `averageRating?: number | null` and `reviewCount?: number` fields. Ratings are computed server-side on every product endpoint (via `groupBy` for the list, `aggregate` for single).
+
+`ProductFilters` is `{ page?, search?, categoryId?, minPrice?, maxPrice?, minRating? }` — the shape passed to both `api.getProducts()` and `useProductStore.fetchProducts()`.
 
 `src/constants.ts` exports `IMAGE` — a placeholder image URL used across product displays.
 
@@ -72,10 +74,11 @@ Feature components:
 - **`ReviewForm.vue`** — extracted form used inside `ProductReviews.vue` for submitting a review.
 - **`WishlistButton.vue`** — props: `productId`; self-contained heart toggle. Always calls `preventDefault` + `stopPropagation` (safe to nest inside `<router-link>`). Redirects guests to `/login?redirectTo=<current path>`. Lazy-fetches wishlist on first interaction for logged-in users.
 - **`AddressForm.vue`** — self-contained address creation form; calls `useAddressStore.createAddress()` internally; emits `saved(ApiAddress)` on success and `cancel` on dismissal. Used in CheckoutPage (inside the "+ Add new address" radio option) and ProfilePage (addresses tab).
+- **`FilterPanel.vue`** — sidebar filter UI; props: `categories`, `categoryId`, `minPrice`, `maxPrice`, `minRating`; emits `category-change`, `price-change`, `rating-change`, `clear`. Used in `HomePage` alongside `PaginationControls`.
 
-### Pagination & Search
+### Pagination, Search & Filtering
 
-`GET /api/products?page=N&search=query` returns `{ items: ApiProduct[], total: number }` — 9 per page, ordered by `createdAt asc`. Search filters by name or description (SQLite `contains`). `HomePage` reads `?page` and `?search` from the URL query, watches both with `{ immediate: true }`, and calls `fetchProducts(page, search)`. The search input is debounced via `src/composables/useDebounce.ts` (300ms) before being pushed to the URL. `PaginationControls.vue` is a presentational component (props: `page`, `total`, `pageSize`; emits `prev`/`next`); `HomePage` handles navigation via `router.push`. `ProductPage` fetches its product directly via `api.getProductById(id)` (not from the store) since the store only holds the current page's 9 items.
+`GET /api/products` supports `?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N` — returns `{ items: ApiProduct[], total: number }` (9/page, `createdAt asc`). `HomePage` reads all filter params from URL query and passes them to `fetchProducts(filters)`. Search and price inputs are debounced (300ms) via `src/composables/useDebounce.ts` before pushing to URL. Category and rating changes are immediate. `FilterPanel` shows active filter pills; `clearFilters` preserves the current search term. `PaginationControls.vue` is presentational (props: `page`, `total`, `pageSize`; emits `prev`/`next`). `ProductPage` fetches its product directly via `api.getProductById(id)` (not from the store) since the store only holds the current page.
 
 Font: **Titillium Web** (400 & 700 weights) via `@fontsource/titillium-web` in `App.vue`.
 
@@ -98,7 +101,8 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 ### API Routes
 
 - `POST /api/auth/register` — create user; `POST /api/auth/login` — start session (sets httpOnly cookie); `POST /api/auth/logout` — end session; `GET /api/auth/me` — get current user (requires auth); `PATCH /api/auth/password` — change password (requires auth, body `{ currentPassword, newPassword }`)
-- `GET /api/products?page=N&search=query` — paginated list (9/page, optional search by name/description, returns `{ items, total }`); `GET /api/products/:id` — single product
+- `GET /api/products?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N` — paginated list (9/page, optional filters, returns `{ items, total }`); `GET /api/products/:id` — single product
+- `GET /api/categories` — returns `ApiCategory[]`
 - `POST /api/carts` — create cart; `GET /api/carts/:id` — get cart with items
 - `POST /api/carts/:id/items` — add item (upserts, increments qty)
 - `PATCH /api/carts/:id/items/:productId` — set quantity
@@ -116,7 +120,7 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 
 Prisma with **better-sqlite3** adapter. Schema in `packages/server/prisma/schema.prisma`. Generated client outputs to `prisma/generated/`.
 
-Models: `Product`, `Cart`, `CartItem` (composite PK: cartId+productId), `Order` (has `userId` FK, optional `addressId` FK), `OrderItem` (composite PK: orderId+productId), `User`, `Session` (has `userId` FK, `expiresAt`), `Review` (`@@unique([userId, productId])`, `rating Int`, `body String?`), `WishlistItem` (composite PK: userId+productId, `@@index([userId])`), `Address` (has `userId` FK; fields: `label?`, `line1`, `line2?`, `city`, `state`, `zip`, `country`; `@@index([userId])`).
+Models: `Category` (`name @unique`, `@@map("categories")`), `Product` (has optional `categoryId` FK), `Cart`, `CartItem` (composite PK: cartId+productId), `Order` (has `userId` FK, optional `addressId` FK), `OrderItem` (composite PK: orderId+productId), `User`, `Session` (has `userId` FK, `expiresAt`), `Review` (`@@unique([userId, productId])`, `rating Int`, `body String?`), `WishlistItem` (composite PK: userId+productId, `@@index([userId])`), `Address` (has `userId` FK; fields: `label?`, `line1`, `line2?`, `city`, `state`, `zip`, `country`; `@@index([userId])`).
 
 `DATABASE_URL` is set in `packages/server/.env` (default: `file:./dev.db`).
 

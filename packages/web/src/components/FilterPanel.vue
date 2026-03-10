@@ -78,7 +78,7 @@ const RATING_OPTIONS = [
   border-radius: 12px;
   padding: 1.25rem 1.25rem 0 1.25rem;
   position: sticky;
-  top: 1.5rem;
+  top: 5.5rem;
 }
 
 .filter-header {
@@ -182,5 +182,11 @@ const RATING_OPTIONS = [
 .price-row :deep(input[type='number']::-webkit-outer-spin-button),
 .price-row :deep(input[type='number']::-webkit-inner-spin-button) {
   -webkit-appearance: none;
+}
+
+@media (max-width: 768px) {
+  .filter-panel {
+    position: static;
+  }
 }
 </style>
