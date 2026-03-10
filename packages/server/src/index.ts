@@ -19,6 +19,11 @@ app.use(cors({
   credentials: true,
 }))
 
+app.onError((err, c) => {
+  console.error(`[${c.req.method}] ${c.req.path}`, err)
+  return c.json({ error: 'Internal server error' }, 500)
+})
+
 app.route('/auth', auth)
 app.route('/products', products)
 app.route('/carts', carts)
