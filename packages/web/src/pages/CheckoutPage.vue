@@ -69,7 +69,7 @@ watch(() => addressStore.items, (items) => {
 
 // --- Order ---
 const cartSubtotal = computed(() =>
-    cartStore.cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
+    cartStore.cartItems.reduce((total, item) => total + item.variant.price * item.quantity, 0),
 )
 
 const orderTotal = computed(() => cartSubtotal.value + shippingCost.value)
@@ -186,15 +186,23 @@ const createOrder = async () => {
                         <h2 class="section-title">Order Summary</h2>
 
                         <ul class="summary-list">
-                            <li v-for="cartItem in cartStore.cartItems" :key="cartItem.productId" class="summary-item">
+                            <li v-for="cartItem in cartStore.cartItems" :key="cartItem.variantId" class="summary-item">
                                 <div class="summary-item-image-wrap">
-                                    <img :src="cartItem.product.image || IMAGE" :alt="cartItem.product.name"
-                                        class="summary-item-image" />
+                                    <img
+                                        :src="cartItem.variant.image ?? cartItem.variant.product.image ?? IMAGE"
+                                        :alt="cartItem.variant.product.name"
+                                        class="summary-item-image"
+                                    />
                                     <span class="summary-item-qty">{{ cartItem.quantity }}</span>
                                 </div>
-                                <p class="summary-item-name">{{ cartItem.product.name }}</p>
+                                <div class="summary-item-info">
+                                    <p class="summary-item-name">{{ cartItem.variant.product.name }}</p>
+                                    <p v-if="cartItem.variant.values.length" class="summary-item-variant">
+                                        {{ cartItem.variant.values.map(v => v.option.value).join(' / ') }}
+                                    </p>
+                                </div>
                                 <p class="summary-item-price">
-                                    ${{ (cartItem.product.price * cartItem.quantity).toFixed(2) }}
+                                    ${{ (cartItem.variant.price * cartItem.quantity).toFixed(2) }}
                                 </p>
                             </li>
                         </ul>
@@ -501,11 +509,22 @@ const createOrder = async () => {
     justify-content: center;
 }
 
-.summary-item-name {
+.summary-item-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.summary-item-name {
     font-size: 0.9375rem;
     font-weight: 700;
     color: var(--color-charcoal);
+}
+
+.summary-item-variant {
+    font-size: 0.8rem;
+    color: var(--color-stone);
 }
 
 .summary-item-price {

@@ -8,12 +8,16 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   console.log('Seeding...')
 
+  await prisma.productVariantValue.deleteMany()
+  await prisma.cartItem.deleteMany()
+  await prisma.orderItem.deleteMany()
+  await prisma.productVariant.deleteMany()
+  await prisma.variantOption.deleteMany()
+  await prisma.variantType.deleteMany()
   await prisma.wishlistItem.deleteMany()
   await prisma.review.deleteMany()
-  await prisma.orderItem.deleteMany()
-  await prisma.address.deleteMany()
   await prisma.order.deleteMany()
-  await prisma.cartItem.deleteMany()
+  await prisma.address.deleteMany()
   await prisma.product.deleteMany()
   await prisma.category.deleteMany()
 
@@ -24,14 +28,168 @@ async function main() {
     prisma.category.create({ data: { name: 'Trailing & Hanging' } }),
   ])
 
-  const products = [
-    {
+  // Helper to create a default (single) variant for a simple product
+  async function createDefaultVariant(productId: string, price: number) {
+    await prisma.productVariant.create({
+      data: { productId, price, isDefault: true },
+    })
+  }
+
+  // --- Products with variants ---
+
+  // Monstera Deliciosa — Pot Size + Pot Color variants
+  const monstera = await prisma.product.create({
+    data: {
       name: 'Monstera Deliciosa',
-      price: 34.99,
-      description: 'The iconic split-leaf philodendron. Low maintenance and thrives in indirect light. A statement piece for any room.',
+      price: 29.99, // base/display price (lowest variant)
+      description:
+        'The iconic split-leaf philodendron. Low maintenance and thrives in indirect light. A statement piece for any room.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Monstera',
       categoryId: tropicals.id,
     },
+  })
+  const monsteraPotSize = await prisma.variantType.create({
+    data: { productId: monstera.id, name: 'Pot Size', position: 0 },
+  })
+  const monsteraPotColor = await prisma.variantType.create({
+    data: { productId: monstera.id, name: 'Pot Color', position: 1 },
+  })
+  const [mSmall, mMedium, mLarge] = await Promise.all([
+    prisma.variantOption.create({ data: { variantTypeId: monsteraPotSize.id, value: 'Small (4")', position: 0 } }),
+    prisma.variantOption.create({ data: { variantTypeId: monsteraPotSize.id, value: 'Medium (6")', position: 1 } }),
+    prisma.variantOption.create({ data: { variantTypeId: monsteraPotSize.id, value: 'Large (8")', position: 2 } }),
+  ])
+  const [mTerracotta, mWhite, mBlack] = await Promise.all([
+    prisma.variantOption.create({ data: { variantTypeId: monsteraPotColor.id, value: 'Terracotta', position: 0 } }),
+    prisma.variantOption.create({ data: { variantTypeId: monsteraPotColor.id, value: 'White Ceramic', position: 1 } }),
+    prisma.variantOption.create({ data: { variantTypeId: monsteraPotColor.id, value: 'Black Ceramic', position: 2 } }),
+  ])
+  // Sparse combinations: Small×Terracotta (default), Small×White, Medium×Terracotta, Medium×White, Large×White, Large×Black
+  await Promise.all([
+    prisma.productVariant.create({
+      data: {
+        productId: monstera.id, price: 29.99, isDefault: true,
+        values: { create: [{ optionId: mSmall.id }, { optionId: mTerracotta.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: monstera.id, price: 29.99,
+        values: { create: [{ optionId: mSmall.id }, { optionId: mWhite.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: monstera.id, price: 39.99,
+        values: { create: [{ optionId: mMedium.id }, { optionId: mTerracotta.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: monstera.id, price: 39.99,
+        values: { create: [{ optionId: mMedium.id }, { optionId: mWhite.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: monstera.id, price: 54.99,
+        values: { create: [{ optionId: mLarge.id }, { optionId: mWhite.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: monstera.id, price: 54.99,
+        values: { create: [{ optionId: mLarge.id }, { optionId: mBlack.id }] },
+      },
+    }),
+  ])
+
+  // Bird of Paradise — Pot Size variants only
+  const bop = await prisma.product.create({
+    data: {
+      name: 'Bird of Paradise',
+      price: 59.99,
+      description:
+        'Dramatic, oversized leaves that bring a tropical feel indoors. Grows large and loves a bright sunny spot.',
+      image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Bird+of+Paradise',
+      categoryId: tropicals.id,
+    },
+  })
+  const bopPotSize = await prisma.variantType.create({
+    data: { productId: bop.id, name: 'Pot Size', position: 0 },
+  })
+  const [bSmall, bMedium, bLarge] = await Promise.all([
+    prisma.variantOption.create({ data: { variantTypeId: bopPotSize.id, value: 'Small (4")', position: 0 } }),
+    prisma.variantOption.create({ data: { variantTypeId: bopPotSize.id, value: 'Medium (6")', position: 1 } }),
+    prisma.variantOption.create({ data: { variantTypeId: bopPotSize.id, value: 'Large (10")', position: 2 } }),
+  ])
+  await Promise.all([
+    prisma.productVariant.create({
+      data: { productId: bop.id, price: 59.99, isDefault: true, values: { create: [{ optionId: bSmall.id }] } },
+    }),
+    prisma.productVariant.create({
+      data: { productId: bop.id, price: 79.99, values: { create: [{ optionId: bMedium.id }] } },
+    }),
+    prisma.productVariant.create({
+      data: { productId: bop.id, price: 109.99, values: { create: [{ optionId: bLarge.id }] } },
+    }),
+  ])
+
+  // Rubber Plant — Pot Size + Pot Color variants
+  const rubber = await prisma.product.create({
+    data: {
+      name: 'Rubber Plant',
+      price: 34.99,
+      description:
+        'Deep burgundy leaves with a waxy sheen. Grows tall and bold, making it a striking focal point in any room.',
+      image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Rubber+Plant',
+      categoryId: statement.id,
+    },
+  })
+  const rubberPotSize = await prisma.variantType.create({
+    data: { productId: rubber.id, name: 'Pot Size', position: 0 },
+  })
+  const rubberPotColor = await prisma.variantType.create({
+    data: { productId: rubber.id, name: 'Pot Color', position: 1 },
+  })
+  const [rSmall, rMedium] = await Promise.all([
+    prisma.variantOption.create({ data: { variantTypeId: rubberPotSize.id, value: 'Small (4")', position: 0 } }),
+    prisma.variantOption.create({ data: { variantTypeId: rubberPotSize.id, value: 'Medium (6")', position: 1 } }),
+  ])
+  const [rTerracotta, rBlack] = await Promise.all([
+    prisma.variantOption.create({ data: { variantTypeId: rubberPotColor.id, value: 'Terracotta', position: 0 } }),
+    prisma.variantOption.create({ data: { variantTypeId: rubberPotColor.id, value: 'Black Ceramic', position: 1 } }),
+  ])
+  await Promise.all([
+    prisma.productVariant.create({
+      data: {
+        productId: rubber.id, price: 34.99, isDefault: true,
+        values: { create: [{ optionId: rSmall.id }, { optionId: rTerracotta.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: rubber.id, price: 34.99,
+        values: { create: [{ optionId: rSmall.id }, { optionId: rBlack.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: rubber.id, price: 49.99,
+        values: { create: [{ optionId: rMedium.id }, { optionId: rTerracotta.id }] },
+      },
+    }),
+    prisma.productVariant.create({
+      data: {
+        productId: rubber.id, price: 49.99,
+        values: { create: [{ optionId: rMedium.id }, { optionId: rBlack.id }] },
+      },
+    }),
+  ])
+
+  // --- Simple products (single default variant) ---
+
+  const simpleProducts = [
     {
       name: 'Fiddle Leaf Fig',
       price: 54.99,
@@ -68,25 +226,11 @@ async function main() {
       categoryId: statement.id,
     },
     {
-      name: 'Bird of Paradise',
-      price: 74.99,
-      description: 'Dramatic, oversized leaves that bring a tropical feel indoors. Grows large and loves a bright sunny spot.',
-      image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Bird+of+Paradise',
-      categoryId: tropicals.id,
-    },
-    {
       name: 'String of Pearls',
       price: 18.99,
       description: 'Cascading strings of round, bead-like leaves. A stunning hanging plant that loves bright light and fast-draining soil.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=String+of+Pearls',
       categoryId: trailing.id,
-    },
-    {
-      name: 'Rubber Plant',
-      price: 39.99,
-      description: 'Deep burgundy leaves with a waxy sheen. Grows tall and bold, making it a striking focal point in any room.',
-      image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Rubber+Plant',
-      categoryId: statement.id,
     },
     {
       name: 'Calathea Orbifolia',
@@ -111,11 +255,12 @@ async function main() {
     },
   ]
 
-  for (const product of products) {
-    await prisma.product.create({ data: product })
+  for (const data of simpleProducts) {
+    const product = await prisma.product.create({ data })
+    await createDefaultVariant(product.id, data.price)
   }
 
-  console.log(`Seeded ${products.length} products across 4 categories.`)
+  console.log(`Seeded products across 4 categories with variants.`)
 }
 
 main()

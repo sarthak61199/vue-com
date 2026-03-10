@@ -8,11 +8,21 @@ const wishlist = new Hono<AuthEnv>()
 // Get all wishlist items for the current user
 wishlist.get('/', requireAuth, async (c) => {
   const userId = c.get('userId')
-  const items = await prisma.wishlistItem.findMany({
+  const rawItems = await prisma.wishlistItem.findMany({
     where: { userId },
-    include: { product: true },
+    include: {
+      product: {
+        include: {
+          variants: { where: { isDefault: true }, take: 1, select: { id: true } },
+        },
+      },
+    },
     orderBy: { createdAt: 'desc' },
   })
+  const items = rawItems.map(({ product: { variants, ...product }, ...item }) => ({
+    ...item,
+    product: { ...product, defaultVariantId: variants[0]?.id ?? null },
+  }))
   return c.json(items)
 })
 

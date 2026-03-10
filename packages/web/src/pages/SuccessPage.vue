@@ -43,21 +43,24 @@ onMounted(async () => {
                 <h2 class="section-title">Order Summary</h2>
 
                 <ul class="order-list">
-                    <li v-for="orderItem in orderStore.currentOrder?.orderItems" :key="orderItem.productId"
+                    <li v-for="orderItem in orderStore.currentOrder?.orderItems" :key="orderItem.variantId"
                         class="order-item">
                         <div class="order-item-image-wrap">
-                            <img :src="orderItem.product.image || IMAGE" :alt="orderItem.product.name"
-                                class="order-item-image" />
+                            <img
+                                :src="orderItem.variant.image ?? orderItem.variant.product.image ?? IMAGE"
+                                :alt="orderItem.variant.product.name"
+                                class="order-item-image"
+                            />
                             <span class="order-item-qty">{{ orderItem.quantity }}</span>
                         </div>
 
                         <div class="order-item-info">
-                            <p class="order-item-name">{{ orderItem.product.name }}</p>
-                            <p class="order-item-unit">${{ orderItem.product.price }} each</p>
+                            <p class="order-item-name">{{ orderItem.variant.product.name }}</p>
+                            <p class="order-item-unit">${{ orderItem.price.toFixed(2) }} each</p>
                         </div>
 
                         <p class="order-item-price">
-                            ${{ (orderItem.product.price * orderItem.quantity).toFixed(2) }}
+                            ${{ (orderItem.price * orderItem.quantity).toFixed(2) }}
                         </p>
                     </li>
                 </ul>

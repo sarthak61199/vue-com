@@ -26,6 +26,34 @@ export interface ApiCategory {
   name: string
 }
 
+export interface ApiVariantOption {
+  id: string
+  value: string
+  position: number
+  variantTypeId: string
+}
+
+export interface ApiVariantType {
+  id: string
+  name: string
+  position: number
+  options: ApiVariantOption[]
+}
+
+export interface ApiProductVariantValue {
+  optionId: string
+  option: ApiVariantOption
+}
+
+export interface ApiProductVariant {
+  id: string
+  productId: string
+  price: number
+  image: string | null
+  isDefault: boolean
+  values: ApiProductVariantValue[]
+}
+
 export interface ApiProduct {
   id: string
   name: string
@@ -38,6 +66,10 @@ export interface ApiProduct {
   updatedAt: string
   averageRating?: number | null
   reviewCount?: number
+  variantTypes?: ApiVariantType[]
+  variants?: ApiProductVariant[]
+  priceRange?: { min: number; max: number }
+  defaultVariantId?: string | null
 }
 
 export interface ProductFilters {
@@ -78,9 +110,9 @@ export interface ApiProductPage {
 
 export interface ApiCartItem {
   cartId: string
-  productId: string
+  variantId: string
   quantity: number
-  product: ApiProduct
+  variant: ApiProductVariant & { product: ApiProduct }
 }
 
 export interface ApiCart {
@@ -92,9 +124,10 @@ export interface ApiCart {
 
 export interface ApiOrderItem {
   orderId: string
-  productId: string
+  variantId: string
   quantity: number
-  product: ApiProduct
+  price: number
+  variant: ApiProductVariant & { product: ApiProduct }
 }
 
 export interface ApiWishlistItem {
@@ -161,18 +194,18 @@ export const api = {
   // Carts
   createCart: () => request<ApiCart>('/carts', { method: 'POST' }),
   getCart: (cartId: string) => request<ApiCart>(`/carts/${cartId}`),
-  addCartItem: (cartId: string, productId: string, quantity: number) =>
+  addCartItem: (cartId: string, variantId: string, quantity: number) =>
     request<ApiCartItem>(`/carts/${cartId}/items`, {
       method: 'POST',
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify({ variantId, quantity }),
     }),
-  updateCartItem: (cartId: string, productId: string, quantity: number) =>
-    request<ApiCartItem>(`/carts/${cartId}/items/${productId}`, {
+  updateCartItem: (cartId: string, variantId: string, quantity: number) =>
+    request<ApiCartItem>(`/carts/${cartId}/items/${variantId}`, {
       method: 'PATCH',
       body: JSON.stringify({ quantity }),
     }),
-  removeCartItem: (cartId: string, productId: string) =>
-    request<{ success: boolean }>(`/carts/${cartId}/items/${productId}`, { method: 'DELETE' }),
+  removeCartItem: (cartId: string, variantId: string) =>
+    request<{ success: boolean }>(`/carts/${cartId}/items/${variantId}`, { method: 'DELETE' }),
 
   // Reviews
   getProductReviews: (productId: string) =>

@@ -5,6 +5,15 @@ import type { AuthEnv } from '../types/auth.js'
 
 const orders = new Hono<AuthEnv>()
 
+const orderItemInclude = {
+  variant: {
+    include: {
+      product: true,
+      values: { include: { option: true } },
+    },
+  },
+}
+
 // Place an order from a cart
 orders.post('/', requireAuth, async (c) => {
   const userId = c.get('userId')
@@ -13,14 +22,20 @@ orders.post('/', requireAuth, async (c) => {
 
   const cart = await prisma.cart.findUnique({
     where: { id: body.cartId },
-    include: { cartItems: { include: { product: true } } },
+    include: {
+      cartItems: {
+        include: {
+          variant: true,
+        },
+      },
+    },
   })
 
   if (!cart) return c.json({ error: 'Cart not found' }, 404)
   if (cart.cartItems.length === 0) return c.json({ error: 'Cart is empty' }, 400)
 
   const total = cart.cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + item.variant.price * item.quantity,
     0,
   )
 
@@ -32,13 +47,14 @@ orders.post('/', requireAuth, async (c) => {
         addressId: body.addressId ?? null,
         orderItems: {
           create: cart.cartItems.map((item) => ({
-            productId: item.productId,
+            variantId: item.variantId,
             quantity: item.quantity,
+            price: item.variant.price,
           })),
         },
       },
       include: {
-        orderItems: { include: { product: true } },
+        orderItems: { include: orderItemInclude },
         address: true,
       },
     })
@@ -58,7 +74,7 @@ orders.get('/:id', requireAuth, async (c) => {
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
-      orderItems: { include: { product: true } },
+      orderItems: { include: orderItemInclude },
       address: true,
     },
   })
@@ -73,7 +89,7 @@ orders.get('/', requireAuth, async (c) => {
   const userOrders = await prisma.order.findMany({
     where: { userId },
     include: {
-      orderItems: { include: { product: true } },
+      orderItems: { include: orderItemInclude },
       address: true,
     },
     orderBy: { createdAt: 'desc' },

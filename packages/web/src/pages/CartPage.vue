@@ -11,8 +11,12 @@ const cartStore = useCartStore()
 const router = useRouter()
 
 const cartTotal = computed(() =>
-  cartStore.cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
+  cartStore.cartItems.reduce((total, item) => total + item.variant.price * item.quantity, 0),
 )
+
+function variantLabel(item: (typeof cartStore.cartItems)[number]): string {
+  return item.variant.values.map((v) => v.option.value).join(' / ')
+}
 </script>
 
 <template>
@@ -35,23 +39,30 @@ const cartTotal = computed(() =>
       <!-- Cart items -->
       <div v-else>
         <ul class="cart-list">
-          <li v-for="cartItem in cartStore.cartItems" :key="cartItem.productId" class="cart-item">
+          <li v-for="cartItem in cartStore.cartItems" :key="cartItem.variantId" class="cart-item">
             <div class="cart-item-image-wrap">
-              <img :src="cartItem.product.image || IMAGE" :alt="cartItem.product.name" class="cart-item-image" />
+              <img
+                :src="cartItem.variant.image ?? cartItem.variant.product.image ?? IMAGE"
+                :alt="cartItem.variant.product.name"
+                class="cart-item-image"
+              />
             </div>
 
             <div class="cart-item-info">
-              <p class="cart-item-name">{{ cartItem.product.name }}</p>
+              <p class="cart-item-name">{{ cartItem.variant.product.name }}</p>
+              <p v-if="cartItem.variant.values.length" class="cart-item-variant">
+                {{ variantLabel(cartItem) }}
+              </p>
             </div>
 
             <QuantityStepper
               :quantity="cartItem.quantity"
-              @change="cartStore.updateQuantity({ productId: cartItem.productId, quantity: $event })"
+              @change="cartStore.updateQuantity({ variantId: cartItem.variantId, quantity: $event })"
             />
 
             <div class="cart-item-right">
-              <p class="cart-item-price">${{ cartItem.product.price * cartItem.quantity }}</p>
-              <BaseButton variant="text" size="sm" @click="cartStore.removeFromCart(cartItem.productId)">
+              <p class="cart-item-price">${{ (cartItem.variant.price * cartItem.quantity).toFixed(2) }}</p>
+              <BaseButton variant="text" size="sm" @click="cartStore.removeFromCart(cartItem.variantId)">
                 Remove
               </BaseButton>
             </div>
@@ -145,7 +156,12 @@ const cartTotal = computed(() =>
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-charcoal);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.125rem;
+}
+
+.cart-item-variant {
+  font-size: 0.8125rem;
+  color: var(--color-stone);
 }
 
 .cart-item-right {

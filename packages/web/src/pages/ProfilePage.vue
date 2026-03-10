@@ -275,10 +275,10 @@ const memberSince = computed(() => {
                   </div>
                 </div>
                 <ul class="order-items">
-                  <li v-for="item in order.orderItems" :key="item.productId" class="order-item">
-                    <span class="order-item-name">{{ item.product.name }}</span>
+                  <li v-for="item in order.orderItems" :key="item.variantId" class="order-item">
+                    <span class="order-item-name">{{ item.variant.product.name }}</span>
                     <span class="order-item-qty">× {{ item.quantity }}</span>
-                    <span class="order-item-price">${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+                    <span class="order-item-price">${{ (item.price * item.quantity).toFixed(2) }}</span>
                   </li>
                 </ul>
               </li>

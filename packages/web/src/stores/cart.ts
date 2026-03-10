@@ -27,12 +27,12 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  const addToCart = async ({ productId, quantity }: { productId: string; quantity: number }) => {
+  const addToCart = async ({ variantId, quantity }: { variantId: string; quantity: number }) => {
     if (!cartId.value) return
     error.value = null
     try {
-      const item = await api.addCartItem(cartId.value, productId, quantity)
-      const existing = cartItems.value.find((i) => i.productId === productId)
+      const item = await api.addCartItem(cartId.value, variantId, quantity)
+      const existing = cartItems.value.find((i) => i.variantId === variantId)
       if (existing) {
         existing.quantity = item.quantity
       } else {
@@ -43,27 +43,27 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  const updateQuantity = async ({ productId, quantity }: { productId: string; quantity: number }) => {
+  const updateQuantity = async ({ variantId, quantity }: { variantId: string; quantity: number }) => {
     if (!cartId.value) return
     if (quantity < 1) {
-      return removeFromCart(productId)
+      return removeFromCart(variantId)
     }
     error.value = null
     try {
-      const item = await api.updateCartItem(cartId.value, productId, quantity)
-      const existing = cartItems.value.find((i) => i.productId === productId)
+      const item = await api.updateCartItem(cartId.value, variantId, quantity)
+      const existing = cartItems.value.find((i) => i.variantId === variantId)
       if (existing) existing.quantity = item.quantity
     } catch (e) {
       error.value = (e as Error).message
     }
   }
 
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (variantId: string) => {
     if (!cartId.value) return
     error.value = null
     try {
-      await api.removeCartItem(cartId.value, productId)
-      cartItems.value = cartItems.value.filter((i) => i.productId !== productId)
+      await api.removeCartItem(cartId.value, variantId)
+      cartItems.value = cartItems.value.filter((i) => i.variantId !== variantId)
     } catch (e) {
       error.value = (e as Error).message
     }

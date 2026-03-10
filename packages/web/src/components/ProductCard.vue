@@ -27,7 +27,14 @@ defineProps<{
             </div>
             <p class="product-description">{{ product.description }}</p>
             <div class="product-footer">
-                <span class="product-price">${{ product.price }}</span>
+                <span class="product-price">
+                  <template v-if="product.priceRange && product.priceRange.min !== product.priceRange.max">
+                    From ${{ product.priceRange.min.toFixed(2) }}
+                  </template>
+                  <template v-else>
+                    ${{ product.price.toFixed(2) }}
+                  </template>
+                </span>
                 <span class="product-cta">View →</span>
             </div>
         </div>

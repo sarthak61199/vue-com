@@ -35,7 +35,7 @@ reviews.get('/eligibility/:productId', requireAuth, async (c) => {
 
   const [hasPurchased, existingReview] = await Promise.all([
     prisma.orderItem.findFirst({
-      where: { productId, order: { userId } },
+      where: { variant: { productId }, order: { userId } },
     }),
     prisma.review.findUnique({
       where: { userId_productId: { userId, productId } },
@@ -61,7 +61,7 @@ reviews.post('/', requireAuth, async (c) => {
   if (!product) return c.json({ error: 'Product not found' }, 404)
 
   const hasPurchased = await prisma.orderItem.findFirst({
-    where: { productId, order: { userId } },
+    where: { variant: { productId }, order: { userId } },
   })
   if (!hasPurchased) {
     return c.json({ error: 'You must purchase this product before reviewing it' }, 403)

@@ -31,14 +31,23 @@ onMounted(async () => {
 
         <div class="order-card">
           <ul class="items-list">
-            <li v-for="item in orderStore.currentOrder.orderItems" :key="item.productId" class="item-row">
+            <li v-for="item in orderStore.currentOrder.orderItems" :key="item.variantId" class="item-row">
               <div class="item-image-wrap">
-                <img :src="item.product.image || IMAGE" :alt="item.product.name" class="item-image" />
+                <img
+                  :src="item.variant.image ?? item.variant.product.image ?? IMAGE"
+                  :alt="item.variant.product.name"
+                  class="item-image"
+                />
               </div>
-              <span class="item-name">{{ item.product.name }}</span>
-              <span class="item-unit-price">${{ item.product.price.toFixed(2) }}</span>
+              <div class="item-info">
+                <span class="item-name">{{ item.variant.product.name }}</span>
+                <span v-if="item.variant.values.length" class="item-variant">
+                  {{ item.variant.values.map(v => v.option.value).join(' / ') }}
+                </span>
+              </div>
+              <span class="item-unit-price">${{ item.price.toFixed(2) }}</span>
               <span class="item-qty">× {{ item.quantity }}</span>
-              <span class="item-line-total">${{ (item.product.price * item.quantity).toFixed(2) }}</span>
+              <span class="item-line-total">${{ (item.price * item.quantity).toFixed(2) }}</span>
             </li>
           </ul>
 
@@ -148,11 +157,22 @@ onMounted(async () => {
   object-fit: cover;
 }
 
-.item-name {
+.item-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.item-name {
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--color-charcoal);
+}
+
+.item-variant {
+  font-size: 0.8rem;
+  color: var(--color-stone);
 }
 
 .item-unit-price {

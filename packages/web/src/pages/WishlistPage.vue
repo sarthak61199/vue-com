@@ -43,7 +43,11 @@ onMounted(async () => {
             <p class="item-price">${{ item.product.price.toFixed(2) }}</p>
           </div>
           <div class="item-actions">
-            <button class="btn-cart" @click="cartStore.addToCart({ productId: item.productId, quantity: 1 })">
+            <button
+              class="btn-cart"
+              :disabled="!item.product.defaultVariantId"
+              @click="item.product.defaultVariantId && cartStore.addToCart({ variantId: item.product.defaultVariantId, quantity: 1 })"
+            >
               Add to Cart
             </button>
             <button class="btn-remove" @click="wishlistStore.removeFromWishlist(item.productId)">
