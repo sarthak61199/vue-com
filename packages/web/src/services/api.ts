@@ -21,16 +21,32 @@ export interface ApiUser {
   createdAt: string
 }
 
+export interface ApiCategory {
+  id: string
+  name: string
+}
+
 export interface ApiProduct {
   id: string
   name: string
   price: number
   description: string
   image: string | null
+  categoryId: string | null
+  category?: ApiCategory | null
   createdAt: string
   updatedAt: string
   averageRating?: number | null
   reviewCount?: number
+}
+
+export interface ProductFilters {
+  page?: number
+  search?: string
+  categoryId?: string
+  minPrice?: number
+  maxPrice?: number
+  minRating?: number
 }
 
 export interface ApiReview {
@@ -129,12 +145,18 @@ export const api = {
     }),
 
   // Products
-  getProducts: (page = 1, search?: string) => {
+  getProducts: (filters: ProductFilters = {}) => {
+    const { page = 1, search, categoryId, minPrice, maxPrice, minRating } = filters
     const params = new URLSearchParams({ page: String(page) })
     if (search) params.set('search', search)
+    if (categoryId) params.set('categoryId', categoryId)
+    if (minPrice != null && !isNaN(minPrice)) params.set('minPrice', String(minPrice))
+    if (maxPrice != null && !isNaN(maxPrice)) params.set('maxPrice', String(maxPrice))
+    if (minRating != null && !isNaN(minRating)) params.set('minRating', String(minRating))
     return request<ApiProductPage>(`/products?${params}`)
   },
   getProductById: (id: string) => request<ApiProduct>(`/products/${id}`),
+  getCategories: () => request<ApiCategory[]>('/categories'),
 
   // Carts
   createCart: () => request<ApiCart>('/carts', { method: 'POST' }),

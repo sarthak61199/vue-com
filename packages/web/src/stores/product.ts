@@ -1,4 +1,4 @@
-import { api, type ApiProduct } from '@/services/api'
+import { api, type ApiProduct, type ApiCategory, type ProductFilters } from '@/services/api'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -8,11 +8,13 @@ export const useProductStore = defineStore('product', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const fetchProducts = async (page: number, search?: string) => {
+  const categories = ref<ApiCategory[]>([])
+
+  const fetchProducts = async (filters: ProductFilters) => {
     loading.value = true
     error.value = null
     try {
-      const data = await api.getProducts(page, search)
+      const data = await api.getProducts(filters)
       products.value = data.items
       total.value = data.total
     } catch (e) {
@@ -22,5 +24,14 @@ export const useProductStore = defineStore('product', () => {
     }
   }
 
-  return { products, total, loading, error, fetchProducts }
+  const fetchCategories = async () => {
+    if (categories.value.length > 0) return
+    try {
+      categories.value = await api.getCategories()
+    } catch {
+      // non-critical, silently fail
+    }
+  }
+
+  return { products, total, loading, error, categories, fetchProducts, fetchCategories }
 })

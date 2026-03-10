@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import { useDebounce } from '@/composables/useDebounce'
@@ -8,39 +8,97 @@ import PaginationControls from '@/components/PaginationControls.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseInput from '@/components/BaseInput.vue'
+import FilterPanel from '@/components/FilterPanel.vue'
 
 const PAGE_SIZE = 9
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 
+// --- URL-derived state ---
 const currentPage = computed(() => {
   const p = parseInt(route.query.page as string, 10)
   return Number.isFinite(p) && p > 0 ? p : 1
 })
-
 const currentSearch = computed(() => (route.query.search as string) || '')
+const currentCategoryId = computed(() => (route.query.categoryId as string) || '')
+const currentMinRating = computed(() => (route.query.minRating as string) || '')
+const currentMinPrice = computed(() => (route.query.minPrice as string) || '')
+const currentMaxPrice = computed(() => (route.query.maxPrice as string) || '')
 
+// --- Search (debounced) ---
 const searchInput = ref(currentSearch.value)
 const debouncedSearch = useDebounce(searchInput, 300)
 
 watch(debouncedSearch, (val) => {
   if (val === currentSearch.value) return
-  router.push({ query: { ...(val ? { search: val } : {}), page: 1 } })
+  router.push({ query: { ...route.query, search: val || undefined, page: 1 } })
 })
 
+// --- Price (local + debounced) ---
+const localMinPrice = ref(currentMinPrice.value)
+const localMaxPrice = ref(currentMaxPrice.value)
+const debouncedMin = useDebounce(localMinPrice, 300)
+const debouncedMax = useDebounce(localMaxPrice, 300)
+
+watch([debouncedMin, debouncedMax], ([min, max]) => {
+  router.push({
+    query: {
+      ...route.query,
+      minPrice: min || undefined,
+      maxPrice: max || undefined,
+      page: 1,
+    },
+  })
+})
+
+// Keep local price in sync if URL changes externally (e.g. clear all)
+watch(currentMinPrice, (v) => { localMinPrice.value = v })
+watch(currentMaxPrice, (v) => { localMaxPrice.value = v })
+
+// --- Filter handlers (immediate) ---
+const setCategory = (id: string) =>
+  router.push({ query: { ...route.query, categoryId: id || undefined, page: 1 } })
+
+const setRating = (val: string) =>
+  router.push({ query: { ...route.query, minRating: val || undefined, page: 1 } })
+
+const clearFilters = () => {
+  localMinPrice.value = ''
+  localMaxPrice.value = ''
+  router.push({
+    query: currentSearch.value ? { search: currentSearch.value, page: 1 } : { page: 1 },
+  })
+}
+
+const clearSearch = () => {
+  searchInput.value = ''
+  router.push({ query: { ...route.query, search: undefined, page: 1 } })
+}
+
+// --- Fetch products on any filter/page change ---
 watch(
-  [currentPage, currentSearch],
-  ([page, search]) => productStore.fetchProducts(page, search || undefined),
+  [currentPage, currentSearch, currentCategoryId, currentMinPrice, currentMaxPrice, currentMinRating],
+  ([page, search, categoryId, minPrice, maxPrice, minRating]) => {
+    productStore.fetchProducts({
+      page,
+      search: search || undefined,
+      categoryId: categoryId || undefined,
+      minPrice: minPrice ? parseFloat(minPrice) : undefined,
+      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+      minRating: minRating ? parseFloat(minRating) : undefined,
+    })
+  },
   { immediate: true },
 )
 
 const goTo = (page: number) => router.push({ query: { ...route.query, page } })
 
-const clearSearch = () => {
-  searchInput.value = ''
-  router.push({ query: { page: 1 } })
-}
+const hasActiveFilters = computed(
+  () => currentCategoryId.value || currentMinPrice.value || currentMaxPrice.value || currentMinRating.value,
+)
+
+onMounted(() => productStore.fetchCategories())
 </script>
 
 <template>
@@ -64,30 +122,80 @@ const clearSearch = () => {
         <BaseButton variant="ghost" size="sm" :disabled="!currentSearch" @click="clearSearch">Clear</BaseButton>
       </div>
 
-      <p v-if="productStore.loading">Loading...</p>
-      <p v-else-if="productStore.error">{{ productStore.error }}</p>
-
-      <!-- Product grid -->
-      <template v-else>
-        <EmptyState
-          v-if="productStore.products.length === 0"
-          :heading="currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'"
-          message="Try a different search term or browse all products."
-          link-to="/"
-          link-text="Clear search →"
+      <!-- Content layout: sidebar + grid -->
+      <div class="content-layout">
+        <FilterPanel
+          :categories="productStore.categories"
+          :category-id="currentCategoryId"
+          :min-price="localMinPrice"
+          :max-price="localMaxPrice"
+          :min-rating="currentMinRating"
+          @category-change="setCategory"
+          @price-change="({ min, max }) => { localMinPrice = min; localMaxPrice = max }"
+          @rating-change="setRating"
+          @clear="clearFilters"
         />
 
-        <template v-else>
-          <ul class="product-grid">
-            <li v-for="product in productStore.products" :key="product.id">
-              <ProductCard :product="product" />
-            </li>
-          </ul>
+        <div class="product-section">
+          <!-- Active filter pills -->
+          <div v-if="hasActiveFilters" class="active-filters">
+            <span class="active-label">Filtered by:</span>
+            <button
+              v-if="currentCategoryId"
+              class="filter-pill"
+              @click="setCategory('')"
+            >
+              {{ productStore.categories.find(c => c.id === currentCategoryId)?.name }}
+              <span class="pill-x">×</span>
+            </button>
+            <button
+              v-if="currentMinPrice || currentMaxPrice"
+              class="filter-pill"
+              @click="() => { localMinPrice = ''; localMaxPrice = '' }"
+            >
+              ${{ currentMinPrice || '0' }} – ${{ currentMaxPrice || '∞' }}
+              <span class="pill-x">×</span>
+            </button>
+            <button
+              v-if="currentMinRating"
+              class="filter-pill"
+              @click="setRating('')"
+            >
+              {{ currentMinRating }}+ stars
+              <span class="pill-x">×</span>
+            </button>
+          </div>
 
-          <PaginationControls :page="currentPage" :total="productStore.total" :page-size="PAGE_SIZE"
-            @prev="goTo(currentPage - 1)" @next="goTo(currentPage + 1)" />
-        </template>
-      </template>
+          <p v-if="productStore.loading" class="status-text">Loading...</p>
+          <p v-else-if="productStore.error" class="status-text">{{ productStore.error }}</p>
+
+          <template v-else>
+            <EmptyState
+              v-if="productStore.products.length === 0"
+              :heading="currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'"
+              message="Try adjusting your filters or search term."
+              link-to="/"
+              link-text="Clear all →"
+            />
+
+            <template v-else>
+              <ul class="product-grid">
+                <li v-for="product in productStore.products" :key="product.id">
+                  <ProductCard :product="product" />
+                </li>
+              </ul>
+
+              <PaginationControls
+                :page="currentPage"
+                :total="productStore.total"
+                :page-size="PAGE_SIZE"
+                @prev="goTo(currentPage - 1)"
+                @next="goTo(currentPage + 1)"
+              />
+            </template>
+          </template>
+        </div>
+      </div>
     </div>
   </main>
 </template>
@@ -98,7 +206,7 @@ const clearSearch = () => {
 }
 
 .page-inner {
-  max-width: 1200px;
+  max-width: 1280px;
   margin-inline: auto;
   padding-inline: 1.5rem;
   padding-block: 3rem 5rem;
@@ -139,6 +247,62 @@ const clearSearch = () => {
   margin-bottom: 2rem;
 }
 
+/* Content layout */
+.content-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Active filter pills */
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.active-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-stone-light);
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--color-mint-50);
+  border: 1px solid var(--color-mint-100);
+  border-radius: 20px;
+  padding: 0.25rem 0.625rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-mint-dark);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.filter-pill:hover {
+  background: var(--color-mint-100);
+}
+
+.pill-x {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-mint-dark);
+}
+
+.status-text {
+  color: var(--color-stone);
+  font-size: 0.9375rem;
+}
+
 /* Grid */
 .product-grid {
   list-style: none;
@@ -156,6 +320,13 @@ const clearSearch = () => {
 @media (min-width: 1024px) {
   .product-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile: stack filter panel above grid */
+@media (max-width: 768px) {
+  .content-layout {
+    grid-template-columns: 1fr;
   }
 }
 </style>

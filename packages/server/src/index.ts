@@ -7,6 +7,7 @@ import auth from './routes/auth.js'
 import reviews from './routes/reviews.js'
 import wishlist from './routes/wishlist.js'
 import addresses from './routes/addresses.js'
+import categories from './routes/categories.js'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
@@ -25,6 +26,7 @@ app.route('/orders', orders)
 app.route('/reviews', reviews)
 app.route('/wishlist', wishlist)
 app.route('/addresses', addresses)
+app.route('/categories', categories)
 
 serve({
   fetch: app.fetch,
