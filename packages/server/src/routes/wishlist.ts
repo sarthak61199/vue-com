@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
+import { validate } from '../lib/validate.js'
+import { AddWishlistItemSchema } from 'schemas'
 
 const wishlist = new Hono<AuthEnv>()
 
@@ -27,12 +29,9 @@ wishlist.get('/', requireAuth, async (c) => {
 })
 
 // Add a product to wishlist (idempotent)
-wishlist.post('/', requireAuth, async (c) => {
+wishlist.post('/', requireAuth, validate('json', AddWishlistItemSchema), async (c) => {
   const userId = c.get('userId')
-  const body = await c.req.json<{ productId: string }>()
-  const { productId } = body
-
-  if (!productId) return c.json({ error: 'productId is required' }, 400)
+  const { productId } = c.req.valid('json')
 
   const product = await prisma.product.findUnique({ where: { id: productId } })
   if (!product) return c.json({ error: 'Product not found' }, 404)

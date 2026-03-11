@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
+import { validate } from '../lib/validate.js'
+import { CreateAddressSchema } from 'schemas'
 
 const addresses = new Hono<AuthEnv>()
 
@@ -16,21 +18,9 @@ addresses.get('/', requireAuth, async (c) => {
 })
 
 // Create a new address
-addresses.post('/', requireAuth, async (c) => {
+addresses.post('/', requireAuth, validate('json', CreateAddressSchema), async (c) => {
   const userId = c.get('userId')
-  const body = await c.req.json<{
-    label?: string
-    line1: string
-    line2?: string
-    city: string
-    state: string
-    zip: string
-    country?: string
-  }>()
-
-  if (!body.line1 || !body.city || !body.state || !body.zip) {
-    return c.json({ error: 'line1, city, state, and zip are required' }, 400)
-  }
+  const body = c.req.valid('json')
 
   const address = await prisma.address.create({
     data: {

@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
+import { validate } from '../lib/validate.js'
+import { CreateReviewSchema } from 'schemas'
 
 const reviews = new Hono<AuthEnv>()
 
@@ -47,15 +49,9 @@ reviews.get('/eligibility/:productId', requireAuth, async (c) => {
 })
 
 // Create or update a review (auth required)
-reviews.post('/', requireAuth, async (c) => {
+reviews.post('/', requireAuth, validate('json', CreateReviewSchema), async (c) => {
   const userId = c.get('userId')
-  const body = await c.req.json<{ productId: string; rating: number; body?: string }>()
-  const { productId, rating, body: reviewBody } = body
-
-  if (!productId) return c.json({ error: 'productId is required' }, 400)
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    return c.json({ error: 'rating must be an integer between 1 and 5' }, 400)
-  }
+  const { productId, rating, body: reviewBody } = c.req.valid('json')
 
   const product = await prisma.product.findUnique({ where: { id: productId } })
   if (!product) return c.json({ error: 'Product not found' }, 404)

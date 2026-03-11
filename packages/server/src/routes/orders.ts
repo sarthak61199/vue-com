@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
+import { validate } from '../lib/validate.js'
+import { CreateOrderSchema } from 'schemas'
 
 const orders = new Hono<AuthEnv>()
 
@@ -15,10 +17,9 @@ const orderItemInclude = {
 }
 
 // Place an order from a cart
-orders.post('/', requireAuth, async (c) => {
+orders.post('/', requireAuth, validate('json', CreateOrderSchema), async (c) => {
   const userId = c.get('userId')
-  const body = await c.req.json<{ cartId: string; addressId?: string }>()
-  if (!body.cartId) return c.json({ error: 'cartId is required' }, 400)
+  const body = c.req.valid('json')
 
   const cart = await prisma.cart.findUnique({
     where: { id: body.cartId },

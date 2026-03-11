@@ -1,19 +1,21 @@
 import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
 import type { Prisma } from '../../prisma/generated/client.js'
+import { validate } from '../lib/validate.js'
+import { ProductQuerySchema } from 'schemas'
 
 const products = new Hono()
 
-products.get('/', async (c) => {
+products.get('/', validate('query', ProductQuerySchema), async (c) => {
   const PAGE_SIZE = 9
-  const raw = c.req.query('page')
-  const page = Math.max(1, parseInt(raw ?? '1', 10) || 1)
+  const q = c.req.valid('query')
+  const page = q.page ?? 1
   const skip = (page - 1) * PAGE_SIZE
-  const search = c.req.query('search')?.trim()
-  const categoryId = c.req.query('categoryId')?.trim() || undefined
-  const minPrice = parseFloat(c.req.query('minPrice') ?? '')
-  const maxPrice = parseFloat(c.req.query('maxPrice') ?? '')
-  const minRating = parseFloat(c.req.query('minRating') ?? '')
+  const search = q.search?.trim()
+  const categoryId = q.categoryId
+  const minPrice = q.minPrice
+  const maxPrice = q.maxPrice
+  const minRating = q.minRating
 
   const where: Prisma.ProductWhereInput = {}
 
@@ -23,12 +25,12 @@ products.get('/', async (c) => {
   if (categoryId) {
     where.categoryId = categoryId
   }
-  if (!isNaN(minPrice) || !isNaN(maxPrice)) {
+  if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {}
-    if (!isNaN(minPrice)) where.price.gte = minPrice
-    if (!isNaN(maxPrice)) where.price.lte = maxPrice
+    if (minPrice !== undefined) where.price.gte = minPrice
+    if (maxPrice !== undefined) where.price.lte = maxPrice
   }
-  if (!isNaN(minRating) && minRating > 0) {
+  if (minRating !== undefined) {
     const ratingGroups = await prisma.review.groupBy({
       by: ['productId'],
       _avg: { rating: true },

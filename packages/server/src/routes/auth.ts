@@ -5,14 +5,13 @@ import bcrypt from 'bcryptjs'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
+import { validate } from '../lib/validate.js'
+import { RegisterSchema, LoginSchema, ChangePasswordSchema } from 'schemas'
 
 const auth = new Hono<AuthEnv>()
 
-auth.post('/register', async (c) => {
-  const body = await c.req.json<{ email?: string; password?: string }>()
-  if (!body.email || !body.password) {
-    return c.json({ error: 'email and password are required' }, 400)
-  }
+auth.post('/register', validate('json', RegisterSchema), async (c) => {
+  const body = c.req.valid('json')
 
   const existing = await prisma.user.findUnique({ where: { email: body.email } })
   if (existing) return c.json({ error: 'Email already registered' }, 409)
@@ -25,11 +24,8 @@ auth.post('/register', async (c) => {
   return c.json({ id: user.id, email: user.email }, 201)
 })
 
-auth.post('/login', async (c) => {
-  const body = await c.req.json<{ email?: string; password?: string }>()
-  if (!body.email || !body.password) {
-    return c.json({ error: 'email and password are required' }, 400)
-  }
+auth.post('/login', validate('json', LoginSchema), async (c) => {
+  const body = c.req.valid('json')
 
   const user = await prisma.user.findUnique({ where: { email: body.email } })
   if (!user) return c.json({ error: 'Invalid credentials' }, 401)
@@ -69,11 +65,8 @@ auth.get('/me', requireAuth, async (c) => {
   return c.json(user)
 })
 
-auth.patch('/password', requireAuth, async (c) => {
-  const body = await c.req.json<{ currentPassword?: string; newPassword?: string }>()
-  if (!body.currentPassword || !body.newPassword) {
-    return c.json({ error: 'currentPassword and newPassword are required' }, 400)
-  }
+auth.patch('/password', requireAuth, validate('json', ChangePasswordSchema), async (c) => {
+  const body = c.req.valid('json')
 
   const user = await prisma.user.findUnique({ where: { id: c.get('userId') } })
   if (!user) return c.json({ error: 'User not found' }, 404)

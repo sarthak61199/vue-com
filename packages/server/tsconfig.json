@@ -10,7 +10,11 @@
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "schemas": ["../schemas/src/index.ts"]
+    }
   },
   "exclude": ["node_modules"]
 }

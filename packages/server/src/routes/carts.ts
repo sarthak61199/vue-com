@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import prisma from '../lib/prisma.js'
+import { validate } from '../lib/validate.js'
+import { AddCartItemSchema, UpdateCartItemSchema } from 'schemas'
 
 const carts = new Hono()
 
@@ -32,16 +34,13 @@ carts.get('/:id', async (c) => {
 })
 
 // Add item to cart
-carts.post('/:id/items', async (c) => {
+carts.post('/:id/items', validate('json', AddCartItemSchema), async (c) => {
   const { id } = c.req.param()
 
   const cart = await prisma.cart.findUnique({ where: { id } })
   if (!cart) return c.json({ error: 'Cart not found' }, 404)
 
-  const body = await c.req.json<{ variantId: string; quantity: number }>()
-  if (!body.variantId || !body.quantity || body.quantity < 1) {
-    return c.json({ error: 'variantId and quantity (>= 1) are required' }, 400)
-  }
+  const body = c.req.valid('json')
 
   const variant = await prisma.productVariant.findUnique({ where: { id: body.variantId } })
   if (!variant) return c.json({ error: 'Variant not found' }, 404)
@@ -57,13 +56,9 @@ carts.post('/:id/items', async (c) => {
 })
 
 // Update item quantity
-carts.patch('/:id/items/:variantId', async (c) => {
+carts.patch('/:id/items/:variantId', validate('json', UpdateCartItemSchema), async (c) => {
   const { id, variantId } = c.req.param()
-  const body = await c.req.json<{ quantity: number }>()
-
-  if (!body.quantity || body.quantity < 1) {
-    return c.json({ error: 'quantity must be >= 1' }, 400)
-  }
+  const body = c.req.valid('json')
 
   const existing = await prisma.cartItem.findUnique({
     where: { cartId_variantId: { cartId: id, variantId } },
