@@ -8,6 +8,7 @@ import SuccessPage from '@/pages/SuccessPage.vue'
 import ProfilePage from '@/pages/ProfilePage.vue'
 import OrderDetailPage from '@/pages/OrderDetailPage.vue'
 import WishlistPage from '@/pages/WishlistPage.vue'
+import NotFoundPage from '@/pages/NotFoundPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -63,6 +64,10 @@ const router = createRouter({
       path: '/register',
       component: RegisterPage,
       meta: { guestOnly: true },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      component: NotFoundPage,
     },
   ],
 })
