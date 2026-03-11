@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useOrderStore } from '@/stores/order'
 import { useAddressStore } from '@/stores/address'
 import { api } from '@/services/api'
+import { formatPrice } from '@/utils/format'
 import EmptyState from '@/components/EmptyState.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
@@ -270,7 +271,7 @@ const memberSince = computed(() => {
                     </p>
                   </div>
                   <div class="order-card-right">
-                    <p class="order-total">${{ order.total.toFixed(2) }}</p>
+                    <p class="order-total">{{ formatPrice(order.total) }}</p>
                     <router-link :to="'/profile/orders/' + order.id" class="view-link">View →</router-link>
                   </div>
                 </div>
@@ -278,7 +279,7 @@ const memberSince = computed(() => {
                   <li v-for="item in order.orderItems" :key="item.variantId" class="order-item">
                     <span class="order-item-name">{{ item.variant.product.name }}</span>
                     <span class="order-item-qty">× {{ item.quantity }}</span>
-                    <span class="order-item-price">${{ (item.price * item.quantity).toFixed(2) }}</span>
+                    <span class="order-item-price">{{ formatPrice(item.price * item.quantity) }}</span>
                   </li>
                 </ul>
               </li>

@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { ref, watch, onUnmounted, type Ref } from 'vue'
 
 export function useDebounce<T>(source: Ref<T>, delay = 300): Ref<T> {
   const debounced = ref(source.value) as Ref<T>
@@ -10,6 +10,8 @@ export function useDebounce<T>(source: Ref<T>, delay = 300): Ref<T> {
       debounced.value = val
     }, delay)
   })
+
+  onUnmounted(() => clearTimeout(timer))
 
   return debounced
 }

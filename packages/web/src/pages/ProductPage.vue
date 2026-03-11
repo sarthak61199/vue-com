@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
 import { api, type ApiProduct, type ApiProductVariant } from '@/services/api'
 import { IMAGE } from '@/constants'
+import { formatPrice } from '@/utils/format'
 import QuantityStepper from '@/components/QuantityStepper.vue'
 import StarRating from '@/components/StarRating.vue'
 import ProductReviews from '@/components/ProductReviews.vue'
@@ -134,7 +135,7 @@ async function refreshProduct() {
         <div class="product-details">
           <p class="product-label">Product</p>
           <h1 class="product-name">{{ product.name }}</h1>
-          <p class="product-price">${{ displayPrice.toFixed(2) }}</p>
+          <p class="product-price">{{ formatPrice(displayPrice) }}</p>
           <div v-if="product.averageRating != null" class="product-rating">
             <StarRating :rating="product.averageRating" :count="product.reviewCount" size="md" />
           </div>

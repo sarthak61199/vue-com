@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { IMAGE } from '@/constants';
+import { IMAGE } from '@/constants'
 import type { ApiProduct } from '@/services/api'
+import { formatPrice } from '@/utils/format'
 import StarRating from '@/components/StarRating.vue'
 import WishlistButton from '@/components/WishlistButton.vue'
 
@@ -29,10 +30,10 @@ defineProps<{
             <div class="product-footer">
                 <span class="product-price">
                   <template v-if="product.priceRange && product.priceRange.min !== product.priceRange.max">
-                    From ${{ product.priceRange.min.toFixed(2) }}
+                    From {{ formatPrice(product.priceRange.min) }}
                   </template>
                   <template v-else>
-                    ${{ product.price.toFixed(2) }}
+                    {{ formatPrice(product.price) }}
                   </template>
                 </span>
                 <span class="product-cta">View →</span>

@@ -4,6 +4,7 @@ import { useWishlistStore } from '@/stores/wishlist'
 import { useCartStore } from '@/stores/cart'
 import EmptyState from '@/components/EmptyState.vue'
 import { IMAGE } from '@/constants'
+import { formatPrice } from '@/utils/format'
 
 const wishlistStore = useWishlistStore()
 const cartStore = useCartStore()
@@ -40,7 +41,7 @@ onMounted(async () => {
             <router-link :to="`/product/${item.productId}`" class="item-name">
               {{ item.product.name }}
             </router-link>
-            <p class="item-price">${{ item.product.price.toFixed(2) }}</p>
+            <p class="item-price">{{ formatPrice(item.product.price) }}</p>
           </div>
           <div class="item-actions">
             <button

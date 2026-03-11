@@ -6,6 +6,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import type { ApiAddress } from '@/services/api'
 import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
+import { formatPrice, getVariantLabel } from '@/utils/format'
 import BaseButton from '@/components/BaseButton.vue'
 import AddressForm from '@/components/AddressForm.vue'
 
@@ -172,7 +173,7 @@ const createOrder = async () => {
                                         </div>
                                     </div>
                                     <span class="shipping-price">
-                                        {{ option.price === 0 ? 'Free' : `$${option.price.toFixed(2)}` }}
+                                        {{ option.price === 0 ? 'Free' : formatPrice(option.price) }}
                                     </span>
                                 </div>
                             </label>
@@ -198,11 +199,11 @@ const createOrder = async () => {
                                 <div class="summary-item-info">
                                     <p class="summary-item-name">{{ cartItem.variant.product.name }}</p>
                                     <p v-if="cartItem.variant.values.length" class="summary-item-variant">
-                                        {{ cartItem.variant.values.map(v => v.option.value).join(' / ') }}
+                                        {{ getVariantLabel(cartItem.variant) }}
                                     </p>
                                 </div>
                                 <p class="summary-item-price">
-                                    ${{ (cartItem.variant.price * cartItem.quantity).toFixed(2) }}
+                                    {{ formatPrice(cartItem.variant.price * cartItem.quantity) }}
                                 </p>
                             </li>
                         </ul>
@@ -210,17 +211,17 @@ const createOrder = async () => {
                         <div class="totals">
                             <div class="totals-row">
                                 <span class="totals-label">Subtotal</span>
-                                <span class="totals-value">${{ cartSubtotal.toFixed(2) }}</span>
+                                <span class="totals-value">{{ formatPrice(cartSubtotal) }}</span>
                             </div>
                             <div class="totals-row">
                                 <span class="totals-label">Shipping</span>
                                 <span class="totals-value">
-                                    {{ shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}` }}
+                                    {{ shippingCost === 0 ? 'Free' : formatPrice(shippingCost) }}
                                 </span>
                             </div>
                             <div class="totals-row totals-row--total">
                                 <span class="totals-total-label">Total</span>
-                                <span class="totals-total-value">${{ orderTotal.toFixed(2) }}</span>
+                                <span class="totals-total-value">{{ formatPrice(orderTotal) }}</span>
                             </div>
                         </div>
 

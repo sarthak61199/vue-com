@@ -3,6 +3,7 @@ import { useOrderStore } from '@/stores/order'
 import { useRoute } from 'vue-router'
 import { onMounted } from 'vue'
 import { IMAGE } from '@/constants'
+import { formatPrice, getVariantLabel } from '@/utils/format'
 
 const route = useRoute()
 const orderStore = useOrderStore()
@@ -42,18 +43,18 @@ onMounted(async () => {
               <div class="item-info">
                 <span class="item-name">{{ item.variant.product.name }}</span>
                 <span v-if="item.variant.values.length" class="item-variant">
-                  {{ item.variant.values.map(v => v.option.value).join(' / ') }}
+                  {{ getVariantLabel(item.variant) }}
                 </span>
               </div>
-              <span class="item-unit-price">${{ item.price.toFixed(2) }}</span>
+              <span class="item-unit-price">{{ formatPrice(item.price) }}</span>
               <span class="item-qty">× {{ item.quantity }}</span>
-              <span class="item-line-total">${{ (item.price * item.quantity).toFixed(2) }}</span>
+              <span class="item-line-total">{{ formatPrice(item.price * item.quantity) }}</span>
             </li>
           </ul>
 
           <div class="order-summary">
             <span class="summary-label">Total</span>
-            <span class="summary-value">${{ orderStore.currentOrder.total.toFixed(2) }}</span>
+            <span class="summary-value">{{ formatPrice(orderStore.currentOrder.total) }}</span>
           </div>
         </div>
       </template>

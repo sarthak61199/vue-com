@@ -3,6 +3,7 @@ import { useOrderStore } from '@/stores/order'
 import { useRoute, useRouter } from 'vue-router'
 import { onMounted } from 'vue'
 import { IMAGE } from '@/constants'
+import { formatPrice } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,18 +57,18 @@ onMounted(async () => {
 
                         <div class="order-item-info">
                             <p class="order-item-name">{{ orderItem.variant.product.name }}</p>
-                            <p class="order-item-unit">${{ orderItem.price.toFixed(2) }} each</p>
+                            <p class="order-item-unit">{{ formatPrice(orderItem.price) }} each</p>
                         </div>
 
                         <p class="order-item-price">
-                            ${{ (orderItem.price * orderItem.quantity).toFixed(2) }}
+                            {{ formatPrice(orderItem.price * orderItem.quantity) }}
                         </p>
                     </li>
                 </ul>
 
                 <div class="order-total">
                     <span class="order-total-label">Total</span>
-                    <span class="order-total-value">${{ orderStore.currentOrder?.total.toFixed(2) }}</span>
+                    <span class="order-total-value">{{ orderStore.currentOrder ? formatPrice(orderStore.currentOrder.total) : '' }}</span>
                 </div>
             </div>
 

@@ -3,6 +3,7 @@ import { useCartStore } from '@/stores/cart'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
+import { formatPrice, getVariantLabel } from '@/utils/format'
 import QuantityStepper from '@/components/QuantityStepper.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import BaseButton from '@/components/BaseButton.vue'
@@ -13,10 +14,6 @@ const router = useRouter()
 const cartTotal = computed(() =>
   cartStore.cartItems.reduce((total, item) => total + item.variant.price * item.quantity, 0),
 )
-
-function variantLabel(item: (typeof cartStore.cartItems)[number]): string {
-  return item.variant.values.map((v) => v.option.value).join(' / ')
-}
 </script>
 
 <template>
@@ -51,7 +48,7 @@ function variantLabel(item: (typeof cartStore.cartItems)[number]): string {
             <div class="cart-item-info">
               <p class="cart-item-name">{{ cartItem.variant.product.name }}</p>
               <p v-if="cartItem.variant.values.length" class="cart-item-variant">
-                {{ variantLabel(cartItem) }}
+                {{ getVariantLabel(cartItem.variant) }}
               </p>
             </div>
 
@@ -61,7 +58,7 @@ function variantLabel(item: (typeof cartStore.cartItems)[number]): string {
             />
 
             <div class="cart-item-right">
-              <p class="cart-item-price">${{ (cartItem.variant.price * cartItem.quantity).toFixed(2) }}</p>
+              <p class="cart-item-price">{{ formatPrice(cartItem.variant.price * cartItem.quantity) }}</p>
               <BaseButton variant="text" size="sm" @click="cartStore.removeFromCart(cartItem.variantId)">
                 Remove
               </BaseButton>
@@ -73,7 +70,7 @@ function variantLabel(item: (typeof cartStore.cartItems)[number]): string {
         <div class="cart-summary">
           <div class="cart-total">
             <span class="cart-total-label">Total</span>
-            <span class="cart-total-value">${{ cartTotal }}</span>
+            <span class="cart-total-value">{{ formatPrice(cartTotal) }}</span>
           </div>
           <BaseButton variant="primary" size="md" @click="router.push('/checkout')">
             Proceed to Checkout
