@@ -43,7 +43,13 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  const updateQuantity = async ({ variantId, quantity }: { variantId: string; quantity: number }) => {
+  const updateQuantity = async ({
+    variantId,
+    quantity,
+  }: {
+    variantId: string
+    quantity: number
+  }) => {
     if (!cartId.value) return
     if (quantity < 1) {
       return removeFromCart(variantId)
@@ -77,5 +83,15 @@ export const useCartStore = defineStore('cart', () => {
   // Auto-init on store creation
   initCart()
 
-  return { cartId, cartItems, loading, error, initCart, addToCart, updateQuantity, removeFromCart, clearCart }
+  return {
+    cartId,
+    cartItems,
+    loading,
+    error,
+    initCart,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+  }
 })

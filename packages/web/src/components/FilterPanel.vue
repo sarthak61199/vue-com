@@ -14,7 +14,7 @@ const emit = defineEmits<{
   'category-change': [id: string]
   'price-change': [value: { min: string; max: string }]
   'rating-change': [value: string]
-  'clear': []
+  clear: []
 }>()
 
 const RATING_OPTIONS = [
@@ -37,11 +37,14 @@ const RATING_OPTIONS = [
       <h3 class="section-heading">Category</h3>
       <ul class="chip-list">
         <li>
-          <button class="chip" :class="{ active: categoryId === '' }" @click="emit('category-change', '')">All</button>
+          <button class="chip" :class="{ active: categoryId === '' }" @click="emit('category-change', '')">
+            All
+          </button>
         </li>
         <li v-for="cat in categories" :key="cat.id">
-          <button class="chip" :class="{ active: categoryId === cat.id }" @click="emit('category-change', cat.id)">{{
-            cat.name }}</button>
+          <button class="chip" :class="{ active: categoryId === cat.id }" @click="emit('category-change', cat.id)">
+            {{ cat.name }}
+          </button>
         </li>
       </ul>
     </section>
@@ -63,8 +66,9 @@ const RATING_OPTIONS = [
       <h3 class="section-heading">Min Rating</h3>
       <ul class="chip-list">
         <li v-for="opt in RATING_OPTIONS" :key="opt.value">
-          <button class="chip" :class="{ active: minRating === opt.value }" @click="emit('rating-change', opt.value)">{{
-            opt.label }}</button>
+          <button class="chip" :class="{ active: minRating === opt.value }" @click="emit('rating-change', opt.value)">
+            {{ opt.label }}
+          </button>
         </li>
       </ul>
     </section>
@@ -146,7 +150,10 @@ const RATING_OPTIONS = [
   font-weight: 700;
   color: var(--color-stone);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
   white-space: nowrap;
 }
 

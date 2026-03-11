@@ -76,7 +76,13 @@ const handleSubmit = async () => {
           <p v-if="confirmError" class="error-msg">{{ confirmError }}</p>
           <p v-else-if="authStore.error" class="error-msg">{{ authStore.error }}</p>
 
-          <BaseButton type="submit" size="lg" full-width :loading="authStore.loading" style="margin-top: 0.25rem">
+          <BaseButton
+            type="submit"
+            size="lg"
+            full-width
+            :loading="authStore.loading"
+            style="margin-top: 0.25rem"
+          >
             {{ authStore.loading ? 'Creating account…' : 'Create account' }}
           </BaseButton>
         </form>

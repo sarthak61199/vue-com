@@ -49,5 +49,14 @@ export const useWishlistStore = defineStore('wishlist', () => {
     }
   }
 
-  return { items, loading, error, wishlistedIds, fetchWishlist, addToWishlist, removeFromWishlist, toggleWishlist }
+  return {
+    items,
+    loading,
+    error,
+    wishlistedIds,
+    fetchWishlist,
+    addToWishlist,
+    removeFromWishlist,
+    toggleWishlist,
+  }
 })

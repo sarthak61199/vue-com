@@ -13,7 +13,9 @@ const min = props.min ?? 1
 
 <template>
   <div class="qty-control">
-    <button class="qty-btn" :disabled="quantity <= min" @click="emit('change', quantity - 1)">−</button>
+    <button class="qty-btn" :disabled="quantity <= min" @click="emit('change', quantity - 1)">
+      −
+    </button>
     <span class="qty-value">{{ quantity }}</span>
     <button class="qty-btn" @click="emit('change', quantity + 1)">+</button>
   </div>

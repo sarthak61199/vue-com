@@ -92,11 +92,7 @@ const memberSince = computed(() => {
         <aside class="sidebar">
           <p class="sidebar-label">Account</p>
           <nav class="sidebar-nav">
-            <button
-              class="tab-btn"
-              :class="{ active: tab === 'info' }"
-              @click="navigateTo('info')"
-            >
+            <button class="tab-btn" :class="{ active: tab === 'info' }" @click="navigateTo('info')">
               My Info
             </button>
             <button
@@ -221,11 +217,19 @@ const memberSince = computed(() => {
                   <div class="address-card-body">
                     <div>
                       <p v-if="addr.label" class="address-card-label">{{ addr.label }}</p>
-                      <p class="address-card-line">{{ addr.line1 }}<span v-if="addr.line2">, {{ addr.line2 }}</span></p>
-                      <p class="address-card-line">{{ addr.city }}, {{ addr.state }} {{ addr.zip }}</p>
+                      <p class="address-card-line">
+                        {{ addr.line1 }}<span v-if="addr.line2">, {{ addr.line2 }}</span>
+                      </p>
+                      <p class="address-card-line">
+                        {{ addr.city }}, {{ addr.state }} {{ addr.zip }}
+                      </p>
                       <p class="address-card-line address-card-country">{{ addr.country }}</p>
                     </div>
-                    <BaseButton variant="ghost" size="sm" @click="addressStore.deleteAddress(addr.id)">
+                    <BaseButton
+                      variant="ghost"
+                      size="sm"
+                      @click="addressStore.deleteAddress(addr.id)"
+                    >
                       Remove
                     </BaseButton>
                   </div>
@@ -233,10 +237,7 @@ const memberSince = computed(() => {
               </ul>
 
               <div v-if="showAddressForm" class="address-form-wrap">
-                <AddressForm
-                  @saved="showAddressForm = false"
-                  @cancel="showAddressForm = false"
-                />
+                <AddressForm @saved="showAddressForm = false" @cancel="showAddressForm = false" />
               </div>
             </template>
           </template>
@@ -272,14 +273,18 @@ const memberSince = computed(() => {
                   </div>
                   <div class="order-card-right">
                     <p class="order-total">{{ formatPrice(order.total) }}</p>
-                    <router-link :to="'/profile/orders/' + order.id" class="view-link">View →</router-link>
+                    <router-link :to="'/profile/orders/' + order.id" class="view-link"
+                      >View →</router-link
+                    >
                   </div>
                 </div>
                 <ul class="order-items">
                   <li v-for="item in order.orderItems" :key="item.variantId" class="order-item">
                     <span class="order-item-name">{{ item.variant.product.name }}</span>
                     <span class="order-item-qty">× {{ item.quantity }}</span>
-                    <span class="order-item-price">{{ formatPrice(item.price * item.quantity) }}</span>
+                    <span class="order-item-price">{{
+                      formatPrice(item.price * item.quantity)
+                    }}</span>
                   </li>
                 </ul>
               </li>

@@ -46,7 +46,9 @@ const submit = async () => {
   <form class="address-form" @submit.prevent="submit">
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="af-label">Label <span class="optional">(optional)</span></label>
+        <label class="form-label" for="af-label"
+          >Label <span class="optional">(optional)</span></label
+        >
         <BaseInput id="af-label" v-model="fields.label" placeholder="Home, Work…" />
       </div>
     </div>
@@ -58,7 +60,9 @@ const submit = async () => {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="af-line2">Apt, Suite <span class="optional">(optional)</span></label>
+        <label class="form-label" for="af-line2"
+          >Apt, Suite <span class="optional">(optional)</span></label
+        >
         <BaseInput id="af-line2" v-model="fields.line2" placeholder="Apt 4B" />
       </div>
     </div>
@@ -81,9 +85,7 @@ const submit = async () => {
       <BaseButton type="submit" variant="dark" :loading="loading">
         {{ loading ? 'Saving…' : 'Save Address' }}
       </BaseButton>
-      <BaseButton type="button" variant="ghost" @click="emit('cancel')">
-        Cancel
-      </BaseButton>
+      <BaseButton type="button" variant="ghost" @click="emit('cancel')"> Cancel </BaseButton>
     </div>
   </form>
 </template>

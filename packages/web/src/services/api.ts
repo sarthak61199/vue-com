@@ -166,7 +166,10 @@ export interface ApiOrder {
 export const api = {
   // Auth
   register: (email: string, password: string) =>
-    request<ApiUser>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    request<ApiUser>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
   login: (email: string, password: string) =>
     request<ApiUser>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),

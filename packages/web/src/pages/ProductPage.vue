@@ -26,7 +26,10 @@ const error = ref<string | null>(null)
 const quantity = ref(1)
 
 function slugify(str: string): string {
-  return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  return str
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
 }
 
 const hasVariants = computed(() => (product.value?.variantTypes?.length ?? 0) > 0)
@@ -60,7 +63,8 @@ const selectedVariant = computed((): ApiProductVariant | null => {
 })
 
 const allTypesSelected = computed(
-  () => !hasVariants.value || selectedOptions.value.size === (product.value?.variantTypes?.length ?? 0),
+  () =>
+    !hasVariants.value || selectedOptions.value.size === (product.value?.variantTypes?.length ?? 0),
 )
 
 const displayPrice = computed(() => selectedVariant.value?.price ?? product.value?.price ?? 0)
@@ -167,12 +171,7 @@ async function refreshProduct() {
             <QuantityStepper :quantity="quantity" @change="quantity = $event" />
           </div>
           <div class="actions-row">
-            <BaseButton
-              variant="dark"
-              size="md"
-              :disabled="!selectedVariant"
-              @click="addToCart"
-            >
+            <BaseButton variant="dark" size="md" :disabled="!selectedVariant" @click="addToCart">
               {{ allTypesSelected && !selectedVariant ? 'Unavailable' : 'Add to Cart' }}
             </BaseButton>
             <WishlistButton :product-id="productId" />

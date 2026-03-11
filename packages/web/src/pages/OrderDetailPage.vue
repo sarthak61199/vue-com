@@ -24,15 +24,28 @@ onMounted(async () => {
       <template v-else-if="orderStore.currentOrder">
         <div class="page-header">
           <p class="page-label">Order Details</p>
-          <h1 class="page-title">Order #{{ orderStore.currentOrder.id.slice(0, 8).toUpperCase() }}</h1>
+          <h1 class="page-title">
+            Order #{{ orderStore.currentOrder.id.slice(0, 8).toUpperCase() }}
+          </h1>
           <p class="page-date">
-            Placed on {{ new Date(orderStore.currentOrder.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}
+            Placed on
+            {{
+              new Date(orderStore.currentOrder.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            }}
           </p>
         </div>
 
         <div class="order-card">
           <ul class="items-list">
-            <li v-for="item in orderStore.currentOrder.orderItems" :key="item.variantId" class="item-row">
+            <li
+              v-for="item in orderStore.currentOrder.orderItems"
+              :key="item.variantId"
+              class="item-row"
+            >
               <div class="item-image-wrap">
                 <img
                   :src="item.variant.image ?? item.variant.product.image ?? IMAGE"

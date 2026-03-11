@@ -53,8 +53,12 @@ watch([debouncedMin, debouncedMax], ([min, max]) => {
 })
 
 // Keep local price in sync if URL changes externally (e.g. clear all)
-watch(currentMinPrice, (v) => { localMinPrice.value = v })
-watch(currentMaxPrice, (v) => { localMaxPrice.value = v })
+watch(currentMinPrice, (v) => {
+  localMinPrice.value = v
+})
+watch(currentMaxPrice, (v) => {
+  localMaxPrice.value = v
+})
 
 // --- Filter handlers (immediate) ---
 const setCategory = (id: string) =>
@@ -78,7 +82,14 @@ const clearSearch = () => {
 
 // --- Fetch products on any filter/page change ---
 watch(
-  [currentPage, currentSearch, currentCategoryId, currentMinPrice, currentMaxPrice, currentMinRating],
+  [
+    currentPage,
+    currentSearch,
+    currentCategoryId,
+    currentMinPrice,
+    currentMaxPrice,
+    currentMinRating,
+  ],
   ([page, search, categoryId, minPrice, maxPrice, minRating]) => {
     productStore.fetchProducts({
       page,
@@ -95,7 +106,11 @@ watch(
 const goTo = (page: number) => router.push({ query: { ...route.query, page } })
 
 const hasActiveFilters = computed(
-  () => currentCategoryId.value || currentMinPrice.value || currentMaxPrice.value || currentMinRating.value,
+  () =>
+    currentCategoryId.value ||
+    currentMinPrice.value ||
+    currentMaxPrice.value ||
+    currentMinRating.value,
 )
 
 onMounted(() => productStore.fetchCategories())
@@ -118,8 +133,15 @@ onMounted(() => productStore.fetchCategories())
 
       <!-- Search bar -->
       <div class="search-bar">
-        <BaseInput v-model="searchInput" type="search" placeholder="Search products..." variant="ghost" />
-        <BaseButton variant="ghost" size="sm" :disabled="!currentSearch" @click="clearSearch">Clear</BaseButton>
+        <BaseInput
+          v-model="searchInput"
+          type="search"
+          placeholder="Search products..."
+          variant="ghost"
+        />
+        <BaseButton variant="ghost" size="sm" :disabled="!currentSearch" @click="clearSearch"
+          >Clear</BaseButton
+        >
       </div>
 
       <!-- Content layout: sidebar + grid -->
@@ -131,7 +153,12 @@ onMounted(() => productStore.fetchCategories())
           :max-price="localMaxPrice"
           :min-rating="currentMinRating"
           @category-change="setCategory"
-          @price-change="({ min, max }) => { localMinPrice = min; localMaxPrice = max }"
+          @price-change="
+            ({ min, max }) => {
+              localMinPrice = min
+              localMaxPrice = max
+            }
+          "
           @rating-change="setRating"
           @clear="clearFilters"
         />
@@ -140,27 +167,24 @@ onMounted(() => productStore.fetchCategories())
           <!-- Active filter pills -->
           <div v-if="hasActiveFilters" class="active-filters">
             <span class="active-label">Filtered by:</span>
-            <button
-              v-if="currentCategoryId"
-              class="filter-pill"
-              @click="setCategory('')"
-            >
-              {{ productStore.categories.find(c => c.id === currentCategoryId)?.name }}
+            <button v-if="currentCategoryId" class="filter-pill" @click="setCategory('')">
+              {{ productStore.categories.find((c) => c.id === currentCategoryId)?.name }}
               <span class="pill-x">×</span>
             </button>
             <button
               v-if="currentMinPrice || currentMaxPrice"
               class="filter-pill"
-              @click="() => { localMinPrice = ''; localMaxPrice = '' }"
+              @click="
+                () => {
+                  localMinPrice = ''
+                  localMaxPrice = ''
+                }
+              "
             >
               ${{ currentMinPrice || '0' }} – ${{ currentMaxPrice || '∞' }}
               <span class="pill-x">×</span>
             </button>
-            <button
-              v-if="currentMinRating"
-              class="filter-pill"
-              @click="setRating('')"
-            >
+            <button v-if="currentMinRating" class="filter-pill" @click="setRating('')">
               {{ currentMinRating }}+ stars
               <span class="pill-x">×</span>
             </button>
@@ -172,7 +196,9 @@ onMounted(() => productStore.fetchCategories())
           <template v-else>
             <EmptyState
               v-if="productStore.products.length === 0"
-              :heading="currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'"
+              :heading="
+                currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'
+              "
               message="Try adjusting your filters or search term."
               link-to="/"
               link-text="Clear all →"

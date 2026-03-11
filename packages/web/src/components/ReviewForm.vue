@@ -35,7 +35,9 @@ function handleSubmit() {
         type="button"
         :aria-label="`${n} star${n > 1 ? 's' : ''}`"
         @click="formRating = n"
-      >★</button>
+      >
+        ★
+      </button>
     </div>
 
     <textarea
@@ -86,7 +88,10 @@ function handleSubmit() {
   color: var(--color-stone);
   opacity: 0.35;
   padding: 0;
-  transition: opacity 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .star-btn--active {

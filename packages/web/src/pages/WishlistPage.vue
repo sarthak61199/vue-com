@@ -47,7 +47,10 @@ onMounted(async () => {
             <button
               class="btn-cart"
               :disabled="!item.product.defaultVariantId"
-              @click="item.product.defaultVariantId && cartStore.addToCart({ variantId: item.product.defaultVariantId, quantity: 1 })"
+              @click="
+                item.product.defaultVariantId &&
+                cartStore.addToCart({ variantId: item.product.defaultVariantId, quantity: 1 })
+              "
             >
               Add to Cart
             </button>

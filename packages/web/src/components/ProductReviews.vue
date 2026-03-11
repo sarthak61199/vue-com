@@ -68,7 +68,9 @@ async function submit(rating: number, body: string) {
     <div v-if="reviewCount > 0" class="reviews-summary">
       <StarRating :rating="averageRating" size="md" />
       <span class="reviews-avg">{{ averageRating?.toFixed(1) }} out of 5</span>
-      <span class="reviews-count">{{ reviewCount }} {{ reviewCount === 1 ? 'review' : 'reviews' }}</span>
+      <span class="reviews-count"
+        >{{ reviewCount }} {{ reviewCount === 1 ? 'review' : 'reviews' }}</span
+      >
     </div>
 
     <!-- Review form -->
@@ -94,9 +96,7 @@ async function submit(rating: number, body: string) {
     <!-- Reviews list -->
     <div v-if="loading" class="review-loading">Loading reviews…</div>
 
-    <div v-else-if="reviews.length === 0" class="no-reviews">
-      No reviews yet. Be the first!
-    </div>
+    <div v-else-if="reviews.length === 0" class="no-reviews">No reviews yet. Be the first!</div>
 
     <ul v-else class="review-list">
       <li v-for="review in reviews" :key="review.id" class="review-item">

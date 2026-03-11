@@ -54,12 +54,20 @@ const cartTotal = computed(() =>
 
             <QuantityStepper
               :quantity="cartItem.quantity"
-              @change="cartStore.updateQuantity({ variantId: cartItem.variantId, quantity: $event })"
+              @change="
+                cartStore.updateQuantity({ variantId: cartItem.variantId, quantity: $event })
+              "
             />
 
             <div class="cart-item-right">
-              <p class="cart-item-price">{{ formatPrice(cartItem.variant.price * cartItem.quantity) }}</p>
-              <BaseButton variant="text" size="sm" @click="cartStore.removeFromCart(cartItem.variantId)">
+              <p class="cart-item-price">
+                {{ formatPrice(cartItem.variant.price * cartItem.quantity) }}
+              </p>
+              <BaseButton
+                variant="text"
+                size="sm"
+                @click="cartStore.removeFromCart(cartItem.variantId)"
+              >
                 Remove
               </BaseButton>
             </div>

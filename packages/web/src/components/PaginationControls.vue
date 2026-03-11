@@ -11,7 +11,9 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
   <div class="pagination">
     <button class="pagination-btn" :disabled="page <= 1" @click="emit('prev')">← Prev</button>
     <span class="pagination-info">Page {{ page }} of {{ totalPages }}</span>
-    <button class="pagination-btn" :disabled="page >= totalPages" @click="emit('next')">Next →</button>
+    <button class="pagination-btn" :disabled="page >= totalPages" @click="emit('next')">
+      Next →
+    </button>
   </div>
 </template>
 

@@ -21,7 +21,8 @@ const filled = computed(() => (props.rating != null ? Math.round(props.rating) :
       class="star"
       :class="n <= filled ? 'star--filled' : 'star--empty'"
       aria-hidden="true"
-    >{{ n <= filled ? '★' : '☆' }}</span>
+      >{{ n <= filled ? '★' : '☆' }}</span
+    >
     <span v-if="count !== undefined" class="star-count">({{ count }})</span>
   </div>
 </template>
