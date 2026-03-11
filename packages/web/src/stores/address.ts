@@ -8,6 +8,7 @@ export const useAddressStore = defineStore('address', () => {
   const error = ref<string | null>(null)
 
   const fetchAddresses = async () => {
+    if (loading.value || items.value.length > 0) return
     loading.value = true
     error.value = null
     try {
