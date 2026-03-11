@@ -288,4 +288,32 @@ onMounted(async () => {
 .error-msg {
   color: #d94f4f;
 }
+
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .item-qty {
+    min-width: auto;
+  }
+
+  .item-line-total {
+    min-width: auto;
+  }
+
+  .item-row {
+    flex-wrap: wrap;
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .order-footer {
+    padding: 1.25rem 1rem;
+  }
+
+  .order-total {
+    align-items: flex-start;
+  }
+}
 </style>

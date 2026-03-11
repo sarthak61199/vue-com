@@ -55,4 +55,10 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+
+@media (max-width: 480px) {
+  .pagination {
+    gap: 0.75rem;
+  }
+}
 </style>

@@ -239,4 +239,15 @@ const RATING_OPTIONS = [
     position: static;
   }
 }
+
+@media (max-width: 480px) {
+  .price-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .price-sep {
+    display: none;
+  }
+}
 </style>

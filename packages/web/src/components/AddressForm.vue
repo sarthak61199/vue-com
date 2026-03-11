@@ -46,9 +46,7 @@ const submit = async () => {
   <form class="address-form" @submit.prevent="submit">
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="af-label"
-          >Label <span class="optional">(optional)</span></label
-        >
+        <label class="form-label" for="af-label">Label <span class="optional">(optional)</span></label>
         <BaseInput id="af-label" v-model="fields.label" placeholder="Home, Work…" />
       </div>
     </div>
@@ -60,9 +58,7 @@ const submit = async () => {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="af-line2"
-          >Apt, Suite <span class="optional">(optional)</span></label
-        >
+        <label class="form-label" for="af-line2">Apt, Suite <span class="optional">(optional)</span></label>
         <BaseInput id="af-line2" v-model="fields.line2" placeholder="Apt 4B" />
       </div>
     </div>
@@ -137,9 +133,14 @@ const submit = async () => {
 }
 
 .form-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  align-items: center;
-  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .form-row--3 {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

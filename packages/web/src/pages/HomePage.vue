@@ -366,6 +366,26 @@ onMounted(() => productStore.fetchCategories())
 @media (max-width: 768px) {
   .content-layout {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .search-bar {
+    flex-direction: column;
+  }
+
+  .search-bar > * {
+    width: 100%;
+  }
+
+  .page-inner {
+    padding-inline: 1rem;
+    padding-block: 2rem 3rem;
   }
 }
 </style>

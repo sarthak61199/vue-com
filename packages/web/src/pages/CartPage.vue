@@ -31,24 +31,16 @@ const hasStockIssue = computed(() =>
       </div>
 
       <!-- Empty state -->
-      <EmptyState
-        v-if="cartStore.cartItems.length === 0"
-        heading="Your cart is empty"
-        message="Looks like you haven't added anything yet."
-        link-to="/"
-        link-text="Browse products →"
-      />
+      <EmptyState v-if="cartStore.cartItems.length === 0" heading="Your cart is empty"
+        message="Looks like you haven't added anything yet." link-to="/" link-text="Browse products →" />
 
       <!-- Cart items -->
       <div v-else>
         <ul class="cart-list">
           <li v-for="cartItem in cartStore.cartItems" :key="cartItem.variantId" class="cart-item">
             <div class="cart-item-image-wrap">
-              <img
-                :src="cartItem.variant.image ?? cartItem.variant.product.image ?? IMAGE"
-                :alt="cartItem.variant.product.name"
-                class="cart-item-image"
-              />
+              <img :src="cartItem.variant.image ?? cartItem.variant.product.image ?? IMAGE"
+                :alt="cartItem.variant.product.name" class="cart-item-image" />
             </div>
 
             <div class="cart-item-info">
@@ -64,24 +56,16 @@ const hasStockIssue = computed(() =>
               </p>
             </div>
 
-            <QuantityStepper
-              :quantity="cartItem.quantity"
-              :disable-minus="cartItem.quantity <= 1"
-              :disable-plus="cartItem.variant.stock <= 0 || cartItem.quantity >= cartItem.variant.stock"
-              @change="
+            <QuantityStepper :quantity="cartItem.quantity" :disable-minus="cartItem.quantity <= 1"
+              :disable-plus="cartItem.variant.stock <= 0 || cartItem.quantity >= cartItem.variant.stock" @change="
                 cartStore.updateQuantity({ variantId: cartItem.variantId, quantity: $event })
-              "
-            />
+                " />
 
             <div class="cart-item-right">
               <p class="cart-item-price">
                 {{ formatPrice(cartItem.variant.price * cartItem.quantity) }}
               </p>
-              <BaseButton
-                variant="text"
-                size="sm"
-                @click="cartStore.removeFromCart(cartItem.variantId)"
-              >
+              <BaseButton variant="text" size="sm" @click="cartStore.removeFromCart(cartItem.variantId)">
                 Remove
               </BaseButton>
             </div>
@@ -238,5 +222,60 @@ const hasStockIssue = computed(() =>
   font-weight: 700;
   color: var(--color-charcoal);
   letter-spacing: -0.03em;
+}
+
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  /* 2-column layout: left = image + info, right = stepper/price/remove */
+  .cart-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-rows: auto auto;
+    column-gap: 0.75rem;
+    row-gap: 0.5rem;
+    align-items: start;
+  }
+
+  /* Column 1 */
+  .cart-item-image-wrap {
+    grid-column: 1;
+    grid-row: 1;
+    width: 64px;
+    height: 64px;
+  }
+
+  .cart-item-info {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  /* QuantityStepper: col 2, row 1 */
+  .cart-item > :nth-child(3) {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  /* Dissolve cart-item-right so price + remove become direct grid children */
+  .cart-item-right {
+    display: contents;
+  }
+
+  /* Price: col 3, row 1 — side by side with stepper */
+  .cart-item-price {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    white-space: nowrap;
+  }
+
+  /* Remove button: spans cols 2–3, row 2 — below both stepper and price */
+  .cart-item-right > :last-child {
+    grid-column: 2 / 4;
+    grid-row: 2;
+  }
 }
 </style>

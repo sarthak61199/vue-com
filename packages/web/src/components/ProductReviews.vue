@@ -207,4 +207,11 @@ async function submit(rating: number, body: string) {
   line-height: 1.65;
   margin: 0;
 }
+
+@media (max-width: 480px) {
+  .review-date {
+    margin-left: 0;
+    width: 100%;
+  }
+}
 </style>

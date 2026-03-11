@@ -635,4 +635,18 @@ const createOrder = async () => {
   color: #d94f4f;
   margin-bottom: 0.75rem;
 }
+
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .section {
+    padding: 1.25rem;
+  }
+
+  .page-inner {
+    padding-inline: 1rem;
+  }
+}
 </style>

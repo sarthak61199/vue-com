@@ -37,4 +37,12 @@
   font-size: 0.8125rem;
   color: var(--color-stone-light);
 }
+
+@media (max-width: 480px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
 </style>

@@ -95,25 +95,13 @@ const memberSince = computed(() => {
             <button class="tab-btn" :class="{ active: tab === 'info' }" @click="navigateTo('info')">
               My Info
             </button>
-            <button
-              class="tab-btn"
-              :class="{ active: tab === 'password' }"
-              @click="navigateTo('password')"
-            >
+            <button class="tab-btn" :class="{ active: tab === 'password' }" @click="navigateTo('password')">
               Change Password
             </button>
-            <button
-              class="tab-btn"
-              :class="{ active: tab === 'orders' }"
-              @click="navigateTo('orders')"
-            >
+            <button class="tab-btn" :class="{ active: tab === 'orders' }" @click="navigateTo('orders')">
               Orders
             </button>
-            <button
-              class="tab-btn"
-              :class="{ active: tab === 'addresses' }"
-              @click="navigateTo('addresses')"
-            >
+            <button class="tab-btn" :class="{ active: tab === 'addresses' }" @click="navigateTo('addresses')">
               Addresses
             </button>
           </nav>
@@ -148,33 +136,18 @@ const memberSince = computed(() => {
             <form class="pw-form" @submit.prevent="submitPasswordChange">
               <div class="form-group">
                 <label class="form-label" for="currentPassword">Current Password</label>
-                <BaseInput
-                  id="currentPassword"
-                  v-model="currentPassword"
-                  type="password"
-                  autocomplete="current-password"
-                  required
-                />
+                <BaseInput id="currentPassword" v-model="currentPassword" type="password"
+                  autocomplete="current-password" required />
               </div>
               <div class="form-group">
                 <label class="form-label" for="newPassword">New Password</label>
-                <BaseInput
-                  id="newPassword"
-                  v-model="newPassword"
-                  type="password"
-                  autocomplete="new-password"
-                  required
-                />
+                <BaseInput id="newPassword" v-model="newPassword" type="password" autocomplete="new-password"
+                  required />
               </div>
               <div class="form-group">
                 <label class="form-label" for="confirmPassword">Confirm New Password</label>
-                <BaseInput
-                  id="confirmPassword"
-                  v-model="confirmPassword"
-                  type="password"
-                  autocomplete="new-password"
-                  required
-                />
+                <BaseInput id="confirmPassword" v-model="confirmPassword" type="password" autocomplete="new-password"
+                  required />
               </div>
               <p v-if="pwError" class="form-msg error-msg">{{ pwError }}</p>
               <p v-if="pwSuccess" class="form-msg success-msg">{{ pwSuccess }}</p>
@@ -191,12 +164,8 @@ const memberSince = computed(() => {
                 <p class="section-label">Delivery</p>
                 <h1 class="section-title">My Addresses</h1>
               </div>
-              <BaseButton
-                v-if="!showAddressForm && !addressStore.loading"
-                variant="dark"
-                size="sm"
-                @click="showAddressForm = true"
-              >
+              <BaseButton v-if="!showAddressForm && !addressStore.loading" variant="dark" size="sm"
+                @click="showAddressForm = true">
                 + Add New
               </BaseButton>
             </div>
@@ -204,13 +173,8 @@ const memberSince = computed(() => {
             <div v-if="addressStore.loading" class="loading-msg">Loading addresses...</div>
 
             <template v-else>
-              <EmptyState
-                v-if="addressStore.items.length === 0 && !showAddressForm"
-                heading="No saved addresses"
-                message="Add an address to speed up checkout."
-                link-to="/checkout"
-                link-text="Go to checkout →"
-              />
+              <EmptyState v-if="addressStore.items.length === 0 && !showAddressForm" heading="No saved addresses"
+                message="Add an address to speed up checkout." link-to="/checkout" link-text="Go to checkout →" />
 
               <ul v-if="addressStore.items.length > 0" class="addresses-list">
                 <li v-for="addr in addressStore.items" :key="addr.id" class="address-card">
@@ -225,11 +189,7 @@ const memberSince = computed(() => {
                       </p>
                       <p class="address-card-line address-card-country">{{ addr.country }}</p>
                     </div>
-                    <BaseButton
-                      variant="ghost"
-                      size="sm"
-                      @click="addressStore.deleteAddress(addr.id)"
-                    >
+                    <BaseButton variant="ghost" size="sm" @click="addressStore.deleteAddress(addr.id)">
                       Remove
                     </BaseButton>
                   </div>
@@ -249,13 +209,8 @@ const memberSince = computed(() => {
               <h1 class="section-title">My Orders</h1>
             </div>
             <div v-if="orderStore.loading" class="loading-msg">Loading orders...</div>
-            <EmptyState
-              v-else-if="orderStore.orders.length === 0"
-              heading="No orders yet"
-              message="Your completed orders will appear here."
-              link-to="/"
-              link-text="Start shopping →"
-            />
+            <EmptyState v-else-if="orderStore.orders.length === 0" heading="No orders yet"
+              message="Your completed orders will appear here." link-to="/" link-text="Start shopping →" />
             <ul v-else class="orders-list">
               <li v-for="order in orderStore.orders" :key="order.id" class="order-card">
                 <div class="order-card-header">
@@ -273,9 +228,7 @@ const memberSince = computed(() => {
                   </div>
                   <div class="order-card-right">
                     <p class="order-total">{{ formatPrice(order.total) }}</p>
-                    <router-link :to="'/profile/orders/' + order.id" class="view-link"
-                      >View →</router-link
-                    >
+                    <router-link :to="'/profile/orders/' + order.id" class="view-link">View →</router-link>
                   </div>
                 </div>
                 <ul class="order-items">
@@ -369,6 +322,7 @@ const memberSince = computed(() => {
 .content {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .section-header {
@@ -630,5 +584,58 @@ const memberSince = computed(() => {
   box-shadow: var(--shadow-card);
   padding: 1.75rem;
   max-width: 560px;
+}
+
+@media (max-width: 768px) {
+  .profile-layout {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .tab-btn {
+    flex: 1 0 auto;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .info-field {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .order-card-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .order-card-right {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .address-card-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .address-form-wrap,
+  .pw-form {
+    max-width: none;
+    padding: 1.25rem;
+  }
 }
 </style>

@@ -432,4 +432,22 @@ async function refreshProduct() {
   color: var(--color-stone);
   font-size: 1.125rem;
 }
+
+@media (max-width: 640px) {
+  .product-name {
+    font-size: 1.625rem;
+  }
+
+  .product-price {
+    font-size: 1.25rem;
+  }
+
+  .actions-row > :first-child {
+    flex: 1;
+  }
+
+  .page-inner {
+    padding-inline: 1rem;
+  }
+}
 </style>

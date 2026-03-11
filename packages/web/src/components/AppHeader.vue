@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
@@ -16,13 +16,27 @@ const handleLogout = async () => {
   await authStore.logout()
   router.push('/login')
 }
+
+const menuOpen = ref(false)
+const toggleMenu = () => {
+  menuOpen.value = !menuOpen.value
+}
+const route = useRoute()
+watch(() => route.path, () => {
+  menuOpen.value = false
+})
 </script>
 
 <template>
   <header class="header">
     <div class="header-inner">
       <router-link to="/" class="logo">Store.</router-link>
-      <nav class="nav">
+      <button class="hamburger" @click="toggleMenu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+      <nav class="nav" :class="{ 'nav-open': menuOpen }">
         <router-link to="/cart" class="nav-link cart-link">
           <span>Cart</span>
           <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount }}</span>
@@ -38,6 +52,7 @@ const handleLogout = async () => {
         </template>
       </nav>
     </div>
+    <div v-if="menuOpen" class="nav-overlay" @click="menuOpen = false"></div>
   </header>
 </template>
 
@@ -128,5 +143,82 @@ const handleLogout = async () => {
   font-size: 0.6875rem;
   font-weight: 700;
   border-radius: 10px;
+}
+
+.hamburger {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    z-index: 110;
+  }
+
+  .hamburger-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--color-charcoal);
+    border-radius: 2px;
+  }
+
+  .nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 75vw;
+    max-width: 300px;
+    background: white;
+    border-left: 1px solid var(--color-border);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 5rem 1.5rem 2rem;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 105;
+  }
+
+  .nav.nav-open {
+    transform: translateX(0);
+  }
+
+  .nav-link {
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--color-border);
+    width: 100%;
+    font-size: 0.875rem;
+  }
+
+  .nav-btn {
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--color-border);
+    width: 100%;
+    text-align: left;
+    font-size: 0.875rem;
+  }
+
+  .user-email {
+    max-width: none;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 100;
+  }
 }
 </style>
