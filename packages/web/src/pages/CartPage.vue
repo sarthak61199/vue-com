@@ -66,7 +66,8 @@ const hasStockIssue = computed(() =>
 
             <QuantityStepper
               :quantity="cartItem.quantity"
-              :max="cartItem.variant.stock > 0 ? cartItem.variant.stock : 0"
+              :disable-minus="cartItem.quantity <= 1"
+              :disable-plus="cartItem.variant.stock <= 0 || cartItem.quantity >= cartItem.variant.stock"
               @change="
                 cartStore.updateQuantity({ variantId: cartItem.variantId, quantity: $event })
               "

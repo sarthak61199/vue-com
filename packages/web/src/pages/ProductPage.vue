@@ -185,7 +185,8 @@ async function refreshProduct() {
           <div class="qty-wrap">
             <QuantityStepper
               :quantity="quantity"
-              :max="isOutOfStock ? 0 : (selectedStock ?? undefined)"
+              :disable-minus="quantity <= 1 || isOutOfStock || (allTypesSelected && !selectedVariant)"
+              :disable-plus="isOutOfStock || (allTypesSelected && !selectedVariant) || (selectedStock !== null && quantity >= selectedStock)"
               @change="quantity = $event"
             />
           </div>

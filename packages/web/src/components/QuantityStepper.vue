@@ -1,24 +1,22 @@
 <script setup lang="ts">
 const props = defineProps<{
   quantity: number
-  min?: number
-  max?: number
+  disableMinus?: boolean
+  disablePlus?: boolean
 }>()
 
 const emit = defineEmits<{
   change: [quantity: number]
 }>()
-
-const min = props.min ?? 1
 </script>
 
 <template>
   <div class="qty-control">
-    <button class="qty-btn" :disabled="quantity <= min" @click="emit('change', quantity - 1)">
+    <button class="qty-btn" :disabled="props.disableMinus" @click="emit('change', quantity - 1)">
       −
     </button>
     <span class="qty-value">{{ quantity }}</span>
-    <button class="qty-btn" :disabled="props.max !== undefined && quantity >= props.max" @click="emit('change', quantity + 1)">+</button>
+    <button class="qty-btn" :disabled="props.disablePlus" @click="emit('change', quantity + 1)">+</button>
   </div>
 </template>
 
