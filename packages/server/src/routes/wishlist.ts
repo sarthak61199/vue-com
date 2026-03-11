@@ -1,64 +1,35 @@
 import { Hono } from 'hono'
-import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
 import { validate } from '../lib/validate.js'
 import { AddWishlistItemSchema } from 'schemas'
+import { getWishlist, addToWishlist, removeFromWishlist } from '../services/wishlist.service.js'
+import { handleServiceError } from '../lib/errors.js'
 
 const wishlist = new Hono<AuthEnv>()
 
-// Get all wishlist items for the current user
 wishlist.get('/', requireAuth, async (c) => {
-  const userId = c.get('userId')
-  const rawItems = await prisma.wishlistItem.findMany({
-    where: { userId },
-    include: {
-      product: {
-        include: {
-          variants: { where: { isDefault: true }, take: 1, select: { id: true } },
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
-  const items = rawItems.map(({ product: { variants, ...product }, ...item }) => ({
-    ...item,
-    product: { ...product, defaultVariantId: variants[0]?.id ?? null },
-  }))
+  const items = await getWishlist(c.get('userId'))
   return c.json(items)
 })
 
-// Add a product to wishlist (idempotent)
 wishlist.post('/', requireAuth, validate('json', AddWishlistItemSchema), async (c) => {
-  const userId = c.get('userId')
-  const { productId } = c.req.valid('json')
-
-  const product = await prisma.product.findUnique({ where: { id: productId } })
-  if (!product) return c.json({ error: 'Product not found' }, 404)
-
-  const item = await prisma.wishlistItem.upsert({
-    where: { userId_productId: { userId, productId } },
-    create: { userId, productId },
-    update: {},
-    include: { product: true },
-  })
-  return c.json(item)
+  try {
+    const { productId } = c.req.valid('json')
+    const item = await addToWishlist(c.get('userId'), productId)
+    return c.json(item)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
 })
 
-// Remove a product from wishlist
 wishlist.delete('/:productId', requireAuth, async (c) => {
-  const userId = c.get('userId')
-  const { productId } = c.req.param()
-
-  const item = await prisma.wishlistItem.findUnique({
-    where: { userId_productId: { userId, productId } },
-  })
-  if (!item) return c.json({ error: 'Item not found' }, 404)
-
-  await prisma.wishlistItem.delete({
-    where: { userId_productId: { userId, productId } },
-  })
-  return c.json({ success: true })
+  try {
+    await removeFromWishlist(c.get('userId'), c.req.param('productId'))
+    return c.json({ success: true })
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
 })
 
 export default wishlist

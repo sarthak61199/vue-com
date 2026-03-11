@@ -88,7 +88,7 @@ Variant label helper pattern (used in cart, checkout, orders):
 variant.values.map(v => v.option.value).join(' / ')  // e.g. "Medium (6") / Terracotta"
 ```
 
-**Stock display patterns** — `ProductPage` computes `selectedStock`, `isOutOfStock` (stock ≤ 0), `isLowStock` (stock 1–5) from `selectedVariant.stock`; shows inline status and disables Add to Cart when OOS; passes `max={selectedStock}` to `QuantityStepper`. `CartPage` and `CheckoutPage` both compute `hasStockIssue` (any item where `quantity > variant.stock` or stock = 0) to disable the proceed/place-order button and surface per-item warnings.
+**Stock display patterns** — `ProductPage` computes `selectedStock`, `isOutOfStock` (stock ≤ 0), `isLowStock` (stock 1–5) from `selectedVariant.stock`; shows inline status and disables Add to Cart when OOS; passes `disableMinus`/`disablePlus` to `QuantityStepper` based on quantity bounds, OOS state, and variant availability. `CartPage` and `CheckoutPage` both compute `hasStockIssue` (any item where `quantity > variant.stock` or stock = 0) to disable the proceed/place-order button and surface per-item warnings.
 
 **Wishlists are product-level**, not variant-level — the `WishlistButton` takes `productId`. The wishlist "Add to Cart" uses `item.product.defaultVariantId`.
 
@@ -102,7 +102,7 @@ Base primitives (use these for forms and actions throughout the app):
 
 Feature components:
 - **`EmptyState.vue`** — props: `heading`, `message`, `linkTo`, `linkText`.
-- **`QuantityStepper.vue`** — props: `quantity`, `min` (default 1), `max?`; emits `change` with new quantity. `+` button disabled when `quantity >= max`.
+- **`QuantityStepper.vue`** — props: `quantity`, `disableMinus?`, `disablePlus?`; emits `change` with new quantity. Purely presentational — all disable logic is computed by the parent.
 - **`StarRating.vue`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`.
 - **`ProductReviews.vue`** — props: `productId`; emits `reviewSubmitted`. Fetches reviews and eligibility on mount. Review submission re-fetches both reviews and parent product (via emitted event handled in ProductPage).
 - **`ReviewForm.vue`** — extracted form used inside `ProductReviews.vue`.
@@ -137,6 +137,37 @@ app.post('/route', validate('json', CreateOrderSchema), async (c) => {
   const data = c.req.valid('json')
 })
 ```
+
+### Service Layer (`src/services/`)
+
+Business logic lives in service files, not route handlers. Routes are thin controllers: parse input → call service → return response.
+
+One service file per domain:
+- `auth.service.ts` — register, login, logout, getMe, changePassword
+- `address.service.ts` — CRUD with ownership check (403)
+- `cart.service.ts` — create/get cart, add/update/remove items with stock validation
+- `category.service.ts` — getAllCategories
+- `order.service.ts` — createOrder (atomic stock decrement transaction), getOrderById (ownership check), getUserOrders
+- `product.service.ts` — listProducts (filter/enrichment pipeline), getProductById
+- `review.service.ts` — getProductReviews, getReviewEligibility, upsertReview (returns `{ review, isNew }` to distinguish 201/200)
+- `wishlist.service.ts` — get/add/remove with `.map()` transform to inject `defaultVariantId`
+
+**Error contract — `src/lib/errors.ts`:**
+```ts
+// Throw from services:
+throw new ServiceError(404, 'Cart not found')
+throw new ServiceError(400, 'Not enough stock', { availableStock: 3 }) // extra fields merged into response
+
+// Catch in routes:
+try {
+  const result = await someService(...)
+  return c.json(result)
+} catch (err) {
+  return handleServiceError(err, c)  // non-ServiceError re-throws to onError 500 handler
+}
+```
+
+Cookie operations (`setCookie`, `deleteCookie`) stay in route handlers — they are HTTP concerns, not service concerns. The `loginUser` service returns `{ token, expiresAt }` and the route calls `setCookie`.
 
 ### Auth Context Type
 

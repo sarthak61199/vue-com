@@ -1,83 +1,60 @@
 import { Hono } from 'hono'
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie'
-import { randomBytes } from 'crypto'
-import bcrypt from 'bcryptjs'
-import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
 import { validate } from '../lib/validate.js'
 import { RegisterSchema, LoginSchema, ChangePasswordSchema } from 'schemas'
+import { registerUser, loginUser, logoutUser, getMe, changePassword } from '../services/auth.service.js'
+import { handleServiceError } from '../lib/errors.js'
 
 const auth = new Hono<AuthEnv>()
 
 auth.post('/register', validate('json', RegisterSchema), async (c) => {
-  const body = c.req.valid('json')
-
-  const existing = await prisma.user.findUnique({ where: { email: body.email } })
-  if (existing) return c.json({ error: 'Email already registered' }, 409)
-
-  const passwordHash = await bcrypt.hash(body.password, 12)
-  const user = await prisma.user.create({
-    data: { email: body.email, passwordHash },
-  })
-
-  return c.json({ id: user.id, email: user.email }, 201)
+  try {
+    const body = c.req.valid('json')
+    const user = await registerUser(body.email, body.password)
+    return c.json(user, 201)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
 })
 
 auth.post('/login', validate('json', LoginSchema), async (c) => {
-  const body = c.req.valid('json')
-
-  const user = await prisma.user.findUnique({ where: { email: body.email } })
-  if (!user) return c.json({ error: 'Invalid credentials' }, 401)
-
-  const valid = await bcrypt.compare(body.password, user.passwordHash)
-  if (!valid) return c.json({ error: 'Invalid credentials' }, 401)
-
-  const token = randomBytes(32).toString('hex')
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  await prisma.session.create({ data: { id: token, userId: user.id, expiresAt } })
-
-  setCookie(c, 'session', token, {
-    httpOnly: true,
-    sameSite: 'Lax',
-    secure: false,
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7,
-  })
-
-  return c.json({ id: user.id, email: user.email })
+  try {
+    const body = c.req.valid('json')
+    const result = await loginUser(body.email, body.password)
+    setCookie(c, 'session', result.token, {
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: false,
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    })
+    return c.json({ id: result.id, email: result.email })
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
 })
 
 auth.post('/logout', async (c) => {
-  const token = getCookie(c, 'session')
-  if (token) {
-    await prisma.session.deleteMany({ where: { id: token } })
-  }
+  await logoutUser(getCookie(c, 'session'))
   deleteCookie(c, 'session', { path: '/' })
   return c.json({ success: true })
 })
 
 auth.get('/me', requireAuth, async (c) => {
-  const user = await prisma.user.findUnique({
-    where: { id: c.get('userId') },
-    select: { id: true, email: true, createdAt: true },
-  })
+  const user = await getMe(c.get('userId'))
   return c.json(user)
 })
 
 auth.patch('/password', requireAuth, validate('json', ChangePasswordSchema), async (c) => {
-  const body = c.req.valid('json')
-
-  const user = await prisma.user.findUnique({ where: { id: c.get('userId') } })
-  if (!user) return c.json({ error: 'User not found' }, 404)
-
-  const valid = await bcrypt.compare(body.currentPassword, user.passwordHash)
-  if (!valid) return c.json({ error: 'Current password is incorrect' }, 401)
-
-  const passwordHash = await bcrypt.hash(body.newPassword, 12)
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } })
-
-  return c.json({ success: true })
+  try {
+    const body = c.req.valid('json')
+    await changePassword(c.get('userId'), body.currentPassword, body.newPassword)
+    return c.json({ success: true })
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
 })
 
 export default auth

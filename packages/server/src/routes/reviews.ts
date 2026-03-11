@@ -1,80 +1,31 @@
 import { Hono } from 'hono'
-import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
 import { validate } from '../lib/validate.js'
 import { CreateReviewSchema } from 'schemas'
+import { getProductReviews, getReviewEligibility, upsertReview } from '../services/review.service.js'
+import { handleServiceError } from '../lib/errors.js'
 
 const reviews = new Hono<AuthEnv>()
 
-// Get all reviews for a product (public)
 reviews.get('/product/:productId', async (c) => {
-  const { productId } = c.req.param()
-
-  const [reviewList, agg] = await Promise.all([
-    prisma.review.findMany({
-      where: { productId },
-      include: { user: { select: { id: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.review.aggregate({
-      where: { productId },
-      _avg: { rating: true },
-      _count: { rating: true },
-    }),
-  ])
-
-  const reviewCount = agg._count.rating
-  const averageRating = reviewCount > 0 ? agg._avg.rating : null
-
-  return c.json({ reviews: reviewList, averageRating, reviewCount })
+  const result = await getProductReviews(c.req.param('productId'))
+  return c.json(result)
 })
 
-// Check if current user can review a product (auth required)
 reviews.get('/eligibility/:productId', requireAuth, async (c) => {
-  const userId = c.get('userId')
-  const { productId } = c.req.param()
-
-  const [hasPurchased, existingReview] = await Promise.all([
-    prisma.orderItem.findFirst({
-      where: { variant: { productId }, order: { userId } },
-    }),
-    prisma.review.findUnique({
-      where: { userId_productId: { userId, productId } },
-      include: { user: { select: { id: true, email: true } } },
-    }),
-  ])
-
-  return c.json({ canReview: !!hasPurchased, existingReview })
+  const result = await getReviewEligibility(c.get('userId'), c.req.param('productId'))
+  return c.json(result)
 })
 
-// Create or update a review (auth required)
 reviews.post('/', requireAuth, validate('json', CreateReviewSchema), async (c) => {
-  const userId = c.get('userId')
-  const { productId, rating, body: reviewBody } = c.req.valid('json')
-
-  const product = await prisma.product.findUnique({ where: { id: productId } })
-  if (!product) return c.json({ error: 'Product not found' }, 404)
-
-  const hasPurchased = await prisma.orderItem.findFirst({
-    where: { variant: { productId }, order: { userId } },
-  })
-  if (!hasPurchased) {
-    return c.json({ error: 'You must purchase this product before reviewing it' }, 403)
+  try {
+    const { productId, rating, body: reviewBody } = c.req.valid('json')
+    const { review, isNew } = await upsertReview(c.get('userId'), productId, rating, reviewBody)
+    return c.json(review, isNew ? 201 : 200)
+  } catch (err) {
+    return handleServiceError(err, c)
   }
-
-  const isNew = !(await prisma.review.findUnique({
-    where: { userId_productId: { userId, productId } },
-  }))
-
-  const review = await prisma.review.upsert({
-    where: { userId_productId: { userId, productId } },
-    create: { userId, productId, rating, body: reviewBody ?? null },
-    update: { rating, body: reviewBody ?? null },
-    include: { user: { select: { id: true, email: true } } },
-  })
-
-  return c.json(review, isNew ? 201 : 200)
 })
 
 export default reviews
