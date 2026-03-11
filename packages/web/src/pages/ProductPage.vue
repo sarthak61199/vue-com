@@ -70,6 +70,12 @@ const allTypesSelected = computed(
 const displayPrice = computed(() => selectedVariant.value?.price ?? product.value?.price ?? 0)
 const displayImage = computed(() => selectedVariant.value?.image ?? product.value?.image ?? null)
 
+const selectedStock = computed(() => selectedVariant.value?.stock ?? null)
+const isOutOfStock = computed(() => selectedStock.value !== null && selectedStock.value <= 0)
+const isLowStock = computed(
+  () => selectedStock.value !== null && selectedStock.value > 0 && selectedStock.value <= 5,
+)
+
 function selectOption(typeName: string, optionId: string) {
   router.replace({ query: { ...route.query, [slugify(typeName)]: optionId } })
 }
@@ -167,12 +173,30 @@ async function refreshProduct() {
             </p>
           </div>
 
+          <!-- Stock status -->
+          <div v-if="selectedVariant" class="stock-status">
+            <span v-if="isOutOfStock" class="stock-badge stock-badge--oos">Out of Stock</span>
+            <span v-else-if="isLowStock" class="stock-badge stock-badge--low">
+              Only {{ selectedStock }} left!
+            </span>
+            <span v-else class="stock-badge stock-badge--ok">In Stock</span>
+          </div>
+
           <div class="qty-wrap">
-            <QuantityStepper :quantity="quantity" @change="quantity = $event" />
+            <QuantityStepper
+              :quantity="quantity"
+              :max="isOutOfStock ? 0 : (selectedStock ?? undefined)"
+              @change="quantity = $event"
+            />
           </div>
           <div class="actions-row">
-            <BaseButton variant="dark" size="md" :disabled="!selectedVariant" @click="addToCart">
-              {{ allTypesSelected && !selectedVariant ? 'Unavailable' : 'Add to Cart' }}
+            <BaseButton
+              variant="dark"
+              size="md"
+              :disabled="!selectedVariant || isOutOfStock"
+              @click="addToCart"
+            >
+              {{ allTypesSelected && !selectedVariant ? 'Unavailable' : isOutOfStock ? 'Out of Stock' : 'Add to Cart' }}
             </BaseButton>
             <WishlistButton :product-id="productId" />
           </div>
@@ -356,6 +380,36 @@ async function refreshProduct() {
   font-size: 0.8125rem;
   font-weight: 600;
   color: #c0392b;
+}
+
+.stock-status {
+  margin-bottom: 1rem;
+  align-self: flex-start;
+}
+
+.stock-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: 100px;
+}
+
+.stock-badge--ok {
+  background: #e6f7ee;
+  color: #1a7f4b;
+}
+
+.stock-badge--low {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.stock-badge--oos {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .qty-wrap {

@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Structure
 
-npm workspaces monorepo with two packages:
+npm workspaces monorepo with three packages:
 - `packages/web` — Vue 3 + TypeScript SPA (Vite)
 - `packages/server` — Hono REST API + Prisma + SQLite
+- `packages/schemas` — shared Zod validation schemas (imported by both web and server)
 
 ## Commands
 
@@ -22,8 +23,9 @@ npm run type-check   # vue-tsc type checking only
 
 # Server (packages/server/)
 npm run dev          # tsx watch src/index.ts (port 3000)
-npm run build        # tsc
+npm run build        # tsc + tsc-alias (path alias replacement)
 npm run start        # node dist/index.js
+npm run seed         # tsx prisma/seed.ts (alternative to npx tsx)
 
 # Database (packages/server/)
 npx prisma migrate dev --name <name>   # create + apply migration
@@ -70,10 +72,10 @@ Key types in `src/services/api.ts`:
 - **`ApiProduct`** — includes optional `variantTypes?`, `variants?`, `priceRange?: { min, max }`, `defaultVariantId?`, `averageRating?`, `reviewCount?`. Ratings computed server-side.
 - **`ApiVariantType`** — `{ id, name, position, options: ApiVariantOption[] }`. Options ordered by `position`.
 - **`ApiVariantOption`** — `{ id, value, position, variantTypeId }`
-- **`ApiProductVariant`** — `{ id, productId, price, image, isDefault, values: ApiProductVariantValue[] }`
+- **`ApiProductVariant`** — `{ id, productId, price, stock, image, isDefault, values: ApiProductVariantValue[] }`
 - **`ApiCartItem`** — `{ cartId, variantId, quantity, variant: ApiProductVariant & { product: ApiProduct } }`. Access product via `cartItem.variant.product`, price via `cartItem.variant.price`.
 - **`ApiOrderItem`** — `{ orderId, variantId, quantity, price, variant: ApiProductVariant & { product: ApiProduct } }`. `price` is a snapshot taken at order creation time.
-- **`ProductFilters`** — `{ page?, search?, categoryId?, minPrice?, maxPrice?, minRating? }`
+- **`ProductFilters`** — `{ page?, search?, categoryId?, minPrice?, maxPrice?, minRating?, excludeOutOfStock? }`
 
 ### Product Variants
 
@@ -85,6 +87,8 @@ Variant label helper pattern (used in cart, checkout, orders):
 ```ts
 variant.values.map(v => v.option.value).join(' / ')  // e.g. "Medium (6") / Terracotta"
 ```
+
+**Stock display patterns** — `ProductPage` computes `selectedStock`, `isOutOfStock` (stock ≤ 0), `isLowStock` (stock 1–5) from `selectedVariant.stock`; shows inline status and disables Add to Cart when OOS; passes `max={selectedStock}` to `QuantityStepper`. `CartPage` and `CheckoutPage` both compute `hasStockIssue` (any item where `quantity > variant.stock` or stock = 0) to disable the proceed/place-order button and surface per-item warnings.
 
 **Wishlists are product-level**, not variant-level — the `WishlistButton` takes `productId`. The wishlist "Add to Cart" uses `item.product.defaultVariantId`.
 
@@ -98,18 +102,18 @@ Base primitives (use these for forms and actions throughout the app):
 
 Feature components:
 - **`EmptyState.vue`** — props: `heading`, `message`, `linkTo`, `linkText`.
-- **`QuantityStepper.vue`** — props: `quantity`, `min` (default 1); emits `change` with new quantity.
+- **`QuantityStepper.vue`** — props: `quantity`, `min` (default 1), `max?`; emits `change` with new quantity. `+` button disabled when `quantity >= max`.
 - **`StarRating.vue`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`.
 - **`ProductReviews.vue`** — props: `productId`; emits `reviewSubmitted`. Fetches reviews and eligibility on mount. Review submission re-fetches both reviews and parent product (via emitted event handled in ProductPage).
 - **`ReviewForm.vue`** — extracted form used inside `ProductReviews.vue`.
 - **`WishlistButton.vue`** — props: `productId`; self-contained heart toggle. Always calls `preventDefault` + `stopPropagation` (safe to nest inside `<router-link>`). Redirects guests to `/login?redirectTo=<current path>`.
 - **`AddressForm.vue`** — self-contained address creation form; calls `useAddressStore.createAddress()` internally; emits `saved(ApiAddress)` and `cancel`. Used in CheckoutPage and ProfilePage.
-- **`FilterPanel.vue`** — sidebar filter UI; props: `categories`, `categoryId`, `minPrice`, `maxPrice`, `minRating`; emits `category-change`, `price-change`, `rating-change`, `clear`.
+- **`FilterPanel.vue`** — sidebar filter UI; props: `categories`, `categoryId`, `minPrice`, `maxPrice`, `minRating`, `excludeOutOfStock`; emits `category-change`, `price-change`, `rating-change`, `stock-change`, `clear`.
 - **`ProductCard.vue`** — shows "From $X.XX" when `product.priceRange.min !== product.priceRange.max`, otherwise flat price.
 
 ### Pagination, Search & Filtering
 
-`GET /api/products` supports `?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N` — returns `{ items: ApiProduct[], total: number }` (9/page, `createdAt asc`). `HomePage` reads all filter params from URL query and passes them to `fetchProducts(filters)`. Search and price inputs are debounced (300ms) via `src/composables/useDebounce.ts` before pushing to URL. Category and rating changes are immediate. `PaginationControls.vue` is presentational (props: `page`, `total`, `pageSize`; emits `prev`/`next`). `ProductPage` fetches its product directly via `api.getProductById(id)` (not from the store).
+`GET /api/products` supports `?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N&excludeOutOfStock=true` — returns `{ items: ApiProduct[], total: number }` (9/page, `createdAt asc`). `HomePage` reads all filter params from URL query and passes them to `fetchProducts(filters)`. Search and price inputs are debounced (300ms) via `src/composables/useDebounce.ts` before pushing to URL. Category, rating, and stock-toggle changes are immediate. `PaginationControls.vue` is presentational (props: `page`, `total`, `pageSize`; emits `prev`/`next`). `ProductPage` fetches its product directly via `api.getProductById(id)` (not from the store).
 
 ### Linting & Formatting
 
@@ -123,6 +127,21 @@ Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-c
 
 **Hono** on `@hono/node-server`, port 3000. CORS restricted to `http://localhost:5173` with `credentials: true`.
 
+### Shared Schemas (`packages/schemas/`)
+
+Zod schemas shared between web and server. Server imports via `schemas` path alias (configured in `packages/server/tsconfig.json`). Exports: `RegisterSchema`, `LoginSchema`, `ChangePasswordSchema`, `ProductQuerySchema`, `CreateOrderSchema`, `AddCartItemSchema`, `UpdateCartItemSchema`, `CreateReviewSchema`, `AddWishlistItemSchema`, `CreateAddressSchema`.
+
+All server routes validate requests using the `validate()` helper from `src/lib/validate.ts` — wraps `@hono/zod-validator`, returns 400 with first error message on failure. Pattern:
+```ts
+app.post('/route', validate('json', CreateOrderSchema), async (c) => {
+  const data = c.req.valid('json')
+})
+```
+
+### Auth Context Type
+
+`AuthEnv = { Variables: { userId: string } }` defined in `src/types/auth.ts`. Authenticated routes type their Hono context as `Context<AuthEnv>` to access `c.get('userId')` after `requireAuth` middleware runs.
+
 ### Auth
 
 Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware reads an httpOnly `session` cookie, looks up the session in DB, and sets `userId` in context. Sessions expire after 7 days. Passwords hashed with bcrypt (cost 12).
@@ -130,12 +149,12 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 ### API Routes
 
 - `POST /api/auth/register` — create user; `POST /api/auth/login` — start session; `POST /api/auth/logout`; `GET /api/auth/me` (requires auth); `PATCH /api/auth/password` (requires auth, body `{ currentPassword, newPassword }`)
-- `GET /api/products?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N` — returns `{ items, total }` with `priceRange`, `defaultVariantId`, `averageRating`, `reviewCount` per product; `GET /api/products/:id` — includes full `variantTypes` (with nested `options`) and `variants` (with nested `values.option`)
+- `GET /api/products?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N&excludeOutOfStock=true` — returns `{ items, total }` with `priceRange`, `defaultVariantId`, `averageRating`, `reviewCount`, `totalStock` per product; `GET /api/products/:id` — includes full `variantTypes` (with nested `options`) and `variants` (with nested `values.option`; each variant includes `stock`)
 - `GET /api/categories`
 - `POST /api/carts`; `GET /api/carts/:id` — includes `cartItems → variant → product` and `variant → values → option`
-- `POST /api/carts/:id/items` — body `{ variantId, quantity }`, upserts (increments qty)
-- `PATCH /api/carts/:id/items/:variantId` — set quantity; `DELETE /api/carts/:id/items/:variantId`
-- `POST /api/orders` — body `{ cartId, addressId? }`; calculates total from `variant.price`; snapshots price into each `OrderItem.price`; clears cart in transaction
+- `POST /api/carts/:id/items` — body `{ variantId, quantity }`, upserts (increments qty); rejects with 400 if `currentQtyInCart + quantity > variant.stock`
+- `PATCH /api/carts/:id/items/:variantId` — set quantity; rejects with 400 if `quantity > variant.stock`; `DELETE /api/carts/:id/items/:variantId`
+- `POST /api/orders` — body `{ cartId, addressId? }`; calculates total from `variant.price`; snapshots price into each `OrderItem.price`; atomically decrements `stock` per variant; rolls back with 400 if any variant has insufficient stock; clears cart in same transaction
 - `GET /api/orders`; `GET /api/orders/:id` — includes `orderItems → variant → product` and `variant → values → option`
 - `GET /api/addresses`; `POST /api/addresses` — body `{ label?, line1, line2?, city, state, zip, country? }`; `DELETE /api/addresses/:id` — ownership-checked
 - `GET /api/reviews/product/:productId`; `GET /api/reviews/eligibility/:productId` — checks `orderItem.variant.productId` (purchase required); `POST /api/reviews` — body `{ productId, rating (1–5), body? }`; upserts
@@ -151,7 +170,7 @@ Prisma with **better-sqlite3** adapter. Schema in `packages/server/prisma/schema
 - `Product` — has optional `categoryId` FK; `price` field serves as base/display price for listings
 - `VariantType` — belongs to Product (`onDelete: Cascade`); fields: `name`, `position`
 - `VariantOption` — belongs to VariantType (`onDelete: Cascade`); fields: `value`, `position`
-- `ProductVariant` — belongs to Product (`onDelete: Cascade`); fields: `price`, `image?`, `isDefault`. Every product has ≥1 variant; simple products have exactly one with `isDefault: true`
+- `ProductVariant` — belongs to Product (`onDelete: Cascade`); fields: `price`, `stock` (default 0), `image?`, `isDefault`. Every product has ≥1 variant; simple products have exactly one with `isDefault: true`
 - `ProductVariantValue` — join table (composite PK: `[variantId, optionId]`) linking ProductVariant to VariantOption
 - `CartItem` — composite PK `[cartId, variantId]`; quantity only
 - `OrderItem` — composite PK `[orderId, variantId]`; stores `quantity` and `price` snapshot

@@ -29,9 +29,9 @@ async function main() {
   ])
 
   // Helper to create a default (single) variant for a simple product
-  async function createDefaultVariant(productId: string, price: number) {
+  async function createDefaultVariant(productId: string, price: number, stock = 20) {
     await prisma.productVariant.create({
-      data: { productId, price, isDefault: true },
+      data: { productId, price, stock, isDefault: true },
     })
   }
 
@@ -68,37 +68,37 @@ async function main() {
   await Promise.all([
     prisma.productVariant.create({
       data: {
-        productId: monstera.id, price: 29.99, isDefault: true,
+        productId: monstera.id, price: 29.99, stock: 20, isDefault: true,
         values: { create: [{ optionId: mSmall.id }, { optionId: mTerracotta.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: monstera.id, price: 29.99,
+        productId: monstera.id, price: 29.99, stock: 3,
         values: { create: [{ optionId: mSmall.id }, { optionId: mWhite.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: monstera.id, price: 39.99,
+        productId: monstera.id, price: 39.99, stock: 15,
         values: { create: [{ optionId: mMedium.id }, { optionId: mTerracotta.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: monstera.id, price: 39.99,
+        productId: monstera.id, price: 39.99, stock: 0,
         values: { create: [{ optionId: mMedium.id }, { optionId: mWhite.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: monstera.id, price: 54.99,
+        productId: monstera.id, price: 54.99, stock: 5,
         values: { create: [{ optionId: mLarge.id }, { optionId: mWhite.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: monstera.id, price: 54.99,
+        productId: monstera.id, price: 54.99, stock: 25,
         values: { create: [{ optionId: mLarge.id }, { optionId: mBlack.id }] },
       },
     }),
@@ -125,13 +125,13 @@ async function main() {
   ])
   await Promise.all([
     prisma.productVariant.create({
-      data: { productId: bop.id, price: 59.99, isDefault: true, values: { create: [{ optionId: bSmall.id }] } },
+      data: { productId: bop.id, price: 59.99, stock: 18, isDefault: true, values: { create: [{ optionId: bSmall.id }] } },
     }),
     prisma.productVariant.create({
-      data: { productId: bop.id, price: 79.99, values: { create: [{ optionId: bMedium.id }] } },
+      data: { productId: bop.id, price: 79.99, stock: 4, values: { create: [{ optionId: bMedium.id }] } },
     }),
     prisma.productVariant.create({
-      data: { productId: bop.id, price: 109.99, values: { create: [{ optionId: bLarge.id }] } },
+      data: { productId: bop.id, price: 109.99, stock: 0, values: { create: [{ optionId: bLarge.id }] } },
     }),
   ])
 
@@ -163,25 +163,25 @@ async function main() {
   await Promise.all([
     prisma.productVariant.create({
       data: {
-        productId: rubber.id, price: 34.99, isDefault: true,
+        productId: rubber.id, price: 34.99, stock: 22, isDefault: true,
         values: { create: [{ optionId: rSmall.id }, { optionId: rTerracotta.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: rubber.id, price: 34.99,
+        productId: rubber.id, price: 34.99, stock: 0,
         values: { create: [{ optionId: rSmall.id }, { optionId: rBlack.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: rubber.id, price: 49.99,
+        productId: rubber.id, price: 49.99, stock: 5,
         values: { create: [{ optionId: rMedium.id }, { optionId: rTerracotta.id }] },
       },
     }),
     prisma.productVariant.create({
       data: {
-        productId: rubber.id, price: 49.99,
+        productId: rubber.id, price: 49.99, stock: 12,
         values: { create: [{ optionId: rMedium.id }, { optionId: rBlack.id }] },
       },
     }),
@@ -189,10 +189,11 @@ async function main() {
 
   // --- Simple products (single default variant) ---
 
-  const simpleProducts = [
+  const simpleProducts: Array<Parameters<typeof prisma.product.create>[0]['data'] & { stock: number }> = [
     {
       name: 'Fiddle Leaf Fig',
       price: 54.99,
+      stock: 17,
       description: 'Bold, architectural leaves that instantly elevate any space. Prefers bright, indirect light and consistent watering.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Fiddle+Leaf',
       categoryId: statement.id,
@@ -200,6 +201,7 @@ async function main() {
     {
       name: 'Pothos Golden',
       price: 14.99,
+      stock: 30,
       description: 'Nearly indestructible and incredibly versatile. Trails beautifully from shelves and tolerates low light like a champ.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Pothos',
       categoryId: trailing.id,
@@ -207,6 +209,7 @@ async function main() {
     {
       name: 'Snake Plant',
       price: 24.99,
+      stock: 0,
       description: 'Thrives on neglect. Tolerates low light and infrequent watering, making it perfect for beginners and busy people.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Snake+Plant',
       categoryId: statement.id,
@@ -214,6 +217,7 @@ async function main() {
     {
       name: 'Peace Lily',
       price: 19.99,
+      stock: 4,
       description: 'Elegant white blooms and glossy leaves. One of the few flowering plants that does well in low light conditions.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Peace+Lily',
       categoryId: tropicals.id,
@@ -221,6 +225,7 @@ async function main() {
     {
       name: 'ZZ Plant',
       price: 29.99,
+      stock: 22,
       description: 'Waxy, dark green leaves that stay looking perfect with minimal care. Drought-tolerant and virtually indestructible.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=ZZ+Plant',
       categoryId: statement.id,
@@ -228,6 +233,7 @@ async function main() {
     {
       name: 'String of Pearls',
       price: 18.99,
+      stock: 2,
       description: 'Cascading strings of round, bead-like leaves. A stunning hanging plant that loves bright light and fast-draining soil.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=String+of+Pearls',
       categoryId: trailing.id,
@@ -235,6 +241,7 @@ async function main() {
     {
       name: 'Calathea Orbifolia',
       price: 32.99,
+      stock: 15,
       description: 'Stunning silver-striped leaves that move throughout the day. Loves humidity and indirect light.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Calathea',
       categoryId: tropicals.id,
@@ -242,6 +249,7 @@ async function main() {
     {
       name: 'Aloe Vera',
       price: 16.99,
+      stock: 25,
       description: 'A practical and beautiful succulent. Keep it on a sunny windowsill and it will reward you with natural soothing gel.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Aloe+Vera',
       categoryId: succulents.id,
@@ -249,18 +257,19 @@ async function main() {
     {
       name: 'Alocasia Polly',
       price: 44.99,
+      stock: 8,
       description: 'Arrow-shaped leaves with striking white veins. A bold, exotic plant that makes an immediate visual impact.',
       image: 'https://placehold.co/800x600/d4edda/2d6a4f/webp?text=Alocasia',
       categoryId: tropicals.id,
     },
   ]
 
-  for (const data of simpleProducts) {
+  for (const { stock, ...data } of simpleProducts) {
     const product = await prisma.product.create({ data })
-    await createDefaultVariant(product.id, data.price)
+    await createDefaultVariant(product.id, data.price as number, stock)
   }
 
-  console.log(`Seeded products across 4 categories with variants.`)
+  console.log(`Seeded products across 4 categories with variants and stock.`)
 }
 
 main()

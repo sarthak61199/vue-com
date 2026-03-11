@@ -25,6 +25,7 @@ const currentCategoryId = computed(() => (route.query.categoryId as string) || '
 const currentMinRating = computed(() => (route.query.minRating as string) || '')
 const currentMinPrice = computed(() => (route.query.minPrice as string) || '')
 const currentMaxPrice = computed(() => (route.query.maxPrice as string) || '')
+const currentExcludeOutOfStock = computed(() => route.query.excludeOutOfStock === 'true')
 
 // --- Search (debounced) ---
 const searchInput = ref(currentSearch.value)
@@ -67,6 +68,9 @@ const setCategory = (id: string) =>
 const setRating = (val: string) =>
   router.push({ query: { ...route.query, minRating: val || undefined, page: 1 } })
 
+const setExcludeOutOfStock = (val: boolean) =>
+  router.push({ query: { ...route.query, excludeOutOfStock: val ? 'true' : undefined, page: 1 } })
+
 const clearFilters = () => {
   localMinPrice.value = ''
   localMaxPrice.value = ''
@@ -89,15 +93,17 @@ watch(
     currentMinPrice,
     currentMaxPrice,
     currentMinRating,
+    currentExcludeOutOfStock,
   ],
-  ([page, search, categoryId, minPrice, maxPrice, minRating]) => {
+  ([page, search, categoryId, minPrice, maxPrice, minRating, excludeOutOfStock]) => {
     productStore.fetchProducts({
       page,
       search: search || undefined,
       categoryId: categoryId || undefined,
-      minPrice: minPrice ? parseFloat(minPrice) : undefined,
-      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
-      minRating: minRating ? parseFloat(minRating) : undefined,
+      minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
+      maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+      minRating: minRating ? parseFloat(minRating as string) : undefined,
+      excludeOutOfStock: excludeOutOfStock || undefined,
     })
   },
   { immediate: true },
@@ -110,7 +116,8 @@ const hasActiveFilters = computed(
     currentCategoryId.value ||
     currentMinPrice.value ||
     currentMaxPrice.value ||
-    currentMinRating.value,
+    currentMinRating.value ||
+    currentExcludeOutOfStock.value,
 )
 
 onMounted(() => productStore.fetchCategories())
@@ -152,6 +159,7 @@ onMounted(() => productStore.fetchCategories())
           :min-price="localMinPrice"
           :max-price="localMaxPrice"
           :min-rating="currentMinRating"
+          :exclude-out-of-stock="currentExcludeOutOfStock"
           @category-change="setCategory"
           @price-change="
             ({ min, max }) => {
@@ -160,6 +168,7 @@ onMounted(() => productStore.fetchCategories())
             }
           "
           @rating-change="setRating"
+          @stock-change="setExcludeOutOfStock"
           @clear="clearFilters"
         />
 
@@ -186,6 +195,10 @@ onMounted(() => productStore.fetchCategories())
             </button>
             <button v-if="currentMinRating" class="filter-pill" @click="setRating('')">
               {{ currentMinRating }}+ stars
+              <span class="pill-x">×</span>
+            </button>
+            <button v-if="currentExcludeOutOfStock" class="filter-pill" @click="setExcludeOutOfStock(false)">
+              In stock only
               <span class="pill-x">×</span>
             </button>
           </div>

@@ -76,6 +76,12 @@ const cartSubtotal = computed(() =>
   cartStore.cartItems.reduce((total, item) => total + item.variant.price * item.quantity, 0),
 )
 
+const hasStockIssue = computed(() =>
+  cartStore.cartItems.some(
+    (item) => item.variant.stock <= 0 || item.quantity > item.variant.stock,
+  ),
+)
+
 const orderTotal = computed(() => cartSubtotal.value + shippingCost.value)
 
 const createOrder = async () => {
@@ -223,6 +229,12 @@ const createOrder = async () => {
                   <p v-if="cartItem.variant.values.length" class="summary-item-variant">
                     {{ getVariantLabel(cartItem.variant) }}
                   </p>
+                  <p v-if="cartItem.variant.stock <= 0" class="summary-item-stock-warn summary-item-stock-warn--oos">
+                    Out of stock
+                  </p>
+                  <p v-else-if="cartItem.quantity > cartItem.variant.stock" class="summary-item-stock-warn">
+                    Only {{ cartItem.variant.stock }} available
+                  </p>
                 </div>
                 <p class="summary-item-price">
                   {{ formatPrice(cartItem.variant.price * cartItem.quantity) }}
@@ -247,8 +259,11 @@ const createOrder = async () => {
               </div>
             </div>
 
-            <p v-if="orderStore.error" class="order-error">{{ orderStore.error }}</p>
-            <BaseButton size="lg" full-width :loading="orderStore.loading" @click="createOrder">
+            <p v-if="hasStockIssue" class="order-error">
+              Some items in your cart are out of stock. Please update your cart before placing an order.
+            </p>
+            <p v-else-if="orderStore.error" class="order-error">{{ orderStore.error }}</p>
+            <BaseButton size="lg" full-width :loading="orderStore.loading" :disabled="hasStockIssue" @click="createOrder">
               {{ orderStore.loading ? 'Placing order…' : 'Place Order' }}
             </BaseButton>
           </section>
@@ -548,6 +563,17 @@ const createOrder = async () => {
 .summary-item-variant {
   font-size: 0.8rem;
   color: var(--color-stone);
+}
+
+.summary-item-stock-warn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b45309;
+  margin-top: 0.125rem;
+}
+
+.summary-item-stock-warn--oos {
+  color: #b91c1c;
 }
 
 .summary-item-price {

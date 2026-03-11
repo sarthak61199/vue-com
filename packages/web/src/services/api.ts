@@ -49,6 +49,7 @@ export interface ApiProductVariant {
   id: string
   productId: string
   price: number
+  stock: number
   image: string | null
   isDefault: boolean
   values: ApiProductVariantValue[]
@@ -70,6 +71,7 @@ export interface ApiProduct {
   variants?: ApiProductVariant[]
   priceRange?: { min: number; max: number }
   defaultVariantId?: string | null
+  totalStock?: number
 }
 
 export interface ProductFilters {
@@ -79,6 +81,7 @@ export interface ProductFilters {
   minPrice?: number
   maxPrice?: number
   minRating?: number
+  excludeOutOfStock?: boolean
 }
 
 export interface ApiReview {
@@ -182,13 +185,14 @@ export const api = {
 
   // Products
   getProducts: (filters: ProductFilters = {}) => {
-    const { page = 1, search, categoryId, minPrice, maxPrice, minRating } = filters
+    const { page = 1, search, categoryId, minPrice, maxPrice, minRating, excludeOutOfStock } = filters
     const params = new URLSearchParams({ page: String(page) })
     if (search) params.set('search', search)
     if (categoryId) params.set('categoryId', categoryId)
     if (minPrice != null && !isNaN(minPrice)) params.set('minPrice', String(minPrice))
     if (maxPrice != null && !isNaN(maxPrice)) params.set('maxPrice', String(maxPrice))
     if (minRating != null && !isNaN(minRating)) params.set('minRating', String(minRating))
+    if (excludeOutOfStock) params.set('excludeOutOfStock', 'true')
     return request<ApiProductPage>(`/products?${params}`)
   },
   getProductById: (id: string) => request<ApiProduct>(`/products/${id}`),

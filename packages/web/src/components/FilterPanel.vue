@@ -8,12 +8,14 @@ defineProps<{
   minPrice: string
   maxPrice: string
   minRating: string
+  excludeOutOfStock: boolean
 }>()
 
 const emit = defineEmits<{
   'category-change': [id: string]
   'price-change': [value: { min: string; max: string }]
   'rating-change': [value: string]
+  'stock-change': [value: boolean]
   clear: []
 }>()
 
@@ -31,6 +33,20 @@ const RATING_OPTIONS = [
       <span class="filter-title">Filters</span>
       <button class="clear-btn" @click="emit('clear')">Clear all</button>
     </div>
+
+    <!-- Availability -->
+    <section class="filter-section">
+      <h3 class="section-heading">Availability</h3>
+      <label class="toggle-row">
+        <span class="toggle-label">In stock only</span>
+        <input
+          type="checkbox"
+          class="toggle-check"
+          :checked="excludeOutOfStock"
+          @change="emit('stock-change', ($event.target as HTMLInputElement).checked)"
+        />
+      </label>
+    </section>
 
     <!-- Category -->
     <section class="filter-section">
@@ -189,6 +205,33 @@ const RATING_OPTIONS = [
 .price-row :deep(input[type='number']::-webkit-outer-spin-button),
 .price-row :deep(input[type='number']::-webkit-inner-spin-button) {
   -webkit-appearance: none;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.toggle-row:hover {
+  background: var(--color-bg);
+}
+
+.toggle-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-stone);
+}
+
+.toggle-check {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-mint-dark);
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

@@ -40,30 +40,50 @@ orders.post('/', requireAuth, validate('json', CreateOrderSchema), async (c) => 
     0,
   )
 
-  const order = await prisma.$transaction(async (tx) => {
-    const newOrder = await tx.order.create({
-      data: {
-        total,
-        userId,
-        addressId: body.addressId ?? null,
-        orderItems: {
-          create: cart.cartItems.map((item) => ({
-            variantId: item.variantId,
-            quantity: item.quantity,
-            price: item.variant.price,
-          })),
+  let order
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      for (const item of cart.cartItems) {
+        const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } })
+        if (!variant || variant.stock < item.quantity) {
+          throw new Error(`Insufficient stock for variant ${item.variantId}`)
+        }
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { decrement: item.quantity } },
+        })
+      }
+
+      const newOrder = await tx.order.create({
+        data: {
+          total,
+          userId,
+          addressId: body.addressId ?? null,
+          orderItems: {
+            create: cart.cartItems.map((item) => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              price: item.variant.price,
+            })),
+          },
         },
-      },
-      include: {
-        orderItems: { include: orderItemInclude },
-        address: true,
-      },
+        include: {
+          orderItems: { include: orderItemInclude },
+          address: true,
+        },
+      })
+
+      await tx.cartItem.deleteMany({ where: { cartId: body.cartId } })
+
+      return newOrder
     })
-
-    await tx.cartItem.deleteMany({ where: { cartId: body.cartId } })
-
-    return newOrder
-  })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ''
+    if (message.startsWith('Insufficient stock')) {
+      return c.json({ error: 'One or more items in your cart are out of stock' }, 400)
+    }
+    throw err
+  }
 
   return c.json(order, 201)
 })

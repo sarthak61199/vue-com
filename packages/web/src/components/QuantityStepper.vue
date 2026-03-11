@@ -2,6 +2,7 @@
 const props = defineProps<{
   quantity: number
   min?: number
+  max?: number
 }>()
 
 const emit = defineEmits<{
@@ -17,7 +18,7 @@ const min = props.min ?? 1
       −
     </button>
     <span class="qty-value">{{ quantity }}</span>
-    <button class="qty-btn" @click="emit('change', quantity + 1)">+</button>
+    <button class="qty-btn" :disabled="props.max !== undefined && quantity >= props.max" @click="emit('change', quantity + 1)">+</button>
   </div>
 </template>
 

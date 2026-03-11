@@ -16,6 +16,7 @@ products.get('/', validate('query', ProductQuerySchema), async (c) => {
   const minPrice = q.minPrice
   const maxPrice = q.maxPrice
   const minRating = q.minRating
+  const excludeOutOfStock = q.excludeOutOfStock
 
   const where: Prisma.ProductWhereInput = {}
 
@@ -29,6 +30,9 @@ products.get('/', validate('query', ProductQuerySchema), async (c) => {
     where.price = {}
     if (minPrice !== undefined) where.price.gte = minPrice
     if (maxPrice !== undefined) where.price.lte = maxPrice
+  }
+  if (excludeOutOfStock) {
+    where.variants = { some: { stock: { gt: 0 } } }
   }
   if (minRating !== undefined) {
     const ratingGroups = await prisma.review.groupBy({
@@ -52,7 +56,7 @@ products.get('/', validate('query', ProductQuerySchema), async (c) => {
 
   const productIds = items.map((p) => p.id)
 
-  const [ratings, variantRanges, defaultVariants] = await Promise.all([
+  const [ratings, variantRanges, defaultVariants, stockTotals] = await Promise.all([
     prisma.review.groupBy({
       by: ['productId'],
       where: { productId: { in: productIds } },
@@ -69,11 +73,17 @@ products.get('/', validate('query', ProductQuerySchema), async (c) => {
       where: { productId: { in: productIds }, isDefault: true },
       select: { id: true, productId: true },
     }),
+    prisma.productVariant.groupBy({
+      by: ['productId'],
+      where: { productId: { in: productIds } },
+      _sum: { stock: true },
+    }),
   ])
 
   const ratingsMap = new Map(ratings.map((r) => [r.productId, r]))
   const rangeMap = new Map(variantRanges.map((r) => [r.productId, r]))
   const defaultVariantMap = new Map(defaultVariants.map((v) => [v.productId, v.id]))
+  const stockMap = new Map(stockTotals.map((s) => [s.productId, s._sum.stock ?? 0]))
 
   const enriched = items.map((p) => {
     const r = ratingsMap.get(p.id)
@@ -86,6 +96,7 @@ products.get('/', validate('query', ProductQuerySchema), async (c) => {
         ? { min: range._min.price ?? p.price, max: range._max.price ?? p.price }
         : { min: p.price, max: p.price },
       defaultVariantId: defaultVariantMap.get(p.id) ?? null,
+      totalStock: stockMap.get(p.id) ?? 0,
     }
   })
 

@@ -14,6 +14,12 @@ const router = useRouter()
 const cartTotal = computed(() =>
   cartStore.cartItems.reduce((total, item) => total + item.variant.price * item.quantity, 0),
 )
+
+const hasStockIssue = computed(() =>
+  cartStore.cartItems.some(
+    (item) => item.variant.stock <= 0 || item.quantity > item.variant.stock,
+  ),
+)
 </script>
 
 <template>
@@ -50,10 +56,17 @@ const cartTotal = computed(() =>
               <p v-if="cartItem.variant.values.length" class="cart-item-variant">
                 {{ getVariantLabel(cartItem.variant) }}
               </p>
+              <p v-if="cartItem.variant.stock <= 0" class="cart-item-stock-warn cart-item-stock-warn--oos">
+                Out of stock
+              </p>
+              <p v-else-if="cartItem.quantity > cartItem.variant.stock" class="cart-item-stock-warn">
+                Only {{ cartItem.variant.stock }} available
+              </p>
             </div>
 
             <QuantityStepper
               :quantity="cartItem.quantity"
+              :max="cartItem.variant.stock > 0 ? cartItem.variant.stock : 0"
               @change="
                 cartStore.updateQuantity({ variantId: cartItem.variantId, quantity: $event })
               "
@@ -80,7 +93,7 @@ const cartTotal = computed(() =>
             <span class="cart-total-label">Total</span>
             <span class="cart-total-value">{{ formatPrice(cartTotal) }}</span>
           </div>
-          <BaseButton variant="primary" size="md" @click="router.push('/checkout')">
+          <BaseButton variant="primary" size="md" :disabled="hasStockIssue" @click="router.push('/checkout')">
             Proceed to Checkout
           </BaseButton>
         </div>
@@ -167,6 +180,17 @@ const cartTotal = computed(() =>
 .cart-item-variant {
   font-size: 0.8125rem;
   color: var(--color-stone);
+}
+
+.cart-item-stock-warn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b45309;
+  margin-top: 0.25rem;
+}
+
+.cart-item-stock-warn--oos {
+  color: #b91c1c;
 }
 
 .cart-item-right {
