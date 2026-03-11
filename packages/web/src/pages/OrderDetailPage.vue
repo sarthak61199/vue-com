@@ -41,17 +41,10 @@ onMounted(async () => {
 
         <div class="order-card">
           <ul class="items-list">
-            <li
-              v-for="item in orderStore.currentOrder.orderItems"
-              :key="item.variantId"
-              class="item-row"
-            >
+            <li v-for="item in orderStore.currentOrder.orderItems" :key="item.variantId" class="item-row">
               <div class="item-image-wrap">
-                <img
-                  :src="item.variant.image ?? item.variant.product.image ?? IMAGE"
-                  :alt="item.variant.product.name"
-                  class="item-image"
-                />
+                <img :src="item.variant.image ?? item.variant.product.image ?? IMAGE" :alt="item.variant.product.name"
+                  class="item-image" />
               </div>
               <div class="item-info">
                 <span class="item-name">{{ item.variant.product.name }}</span>
@@ -65,9 +58,28 @@ onMounted(async () => {
             </li>
           </ul>
 
-          <div class="order-summary">
-            <span class="summary-label">Total</span>
-            <span class="summary-value">{{ formatPrice(orderStore.currentOrder.total) }}</span>
+          <div class="order-footer" :class="{ 'footer-no-address': !orderStore.currentOrder.address }">
+            <div v-if="orderStore.currentOrder.address" class="delivery-info">
+              <span class="footer-label">Delivered to</span>
+              <p v-if="orderStore.currentOrder.address.label" class="delivery-name">
+                {{ orderStore.currentOrder.address.label }}
+              </p>
+              <p class="delivery-text">{{ orderStore.currentOrder.address.line1 }}</p>
+              <p v-if="orderStore.currentOrder.address.line2" class="delivery-text">
+                {{ orderStore.currentOrder.address.line2 }}
+              </p>
+              <p class="delivery-text">
+                {{ orderStore.currentOrder.address.city }},
+                {{ orderStore.currentOrder.address.state }}
+                {{ orderStore.currentOrder.address.zip }}
+              </p>
+              <p class="delivery-text">{{ orderStore.currentOrder.address.country }}</p>
+            </div>
+
+            <div class="order-total">
+              <span class="footer-label">Total</span>
+              <span class="total-value">{{ formatPrice(orderStore.currentOrder.total) }}</span>
+            </div>
           </div>
         </div>
       </template>
@@ -209,24 +221,56 @@ onMounted(async () => {
   text-align: right;
 }
 
-/* Summary */
-.order-summary {
+/* Footer: address + total */
+.order-footer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 2rem;
   padding: 1.5rem 1.75rem;
   border-top: 2px solid var(--color-charcoal);
 }
 
-.summary-label {
+.footer-no-address {
+  justify-content: flex-end;
+}
+
+.footer-label {
+  display: block;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-stone);
+  margin-bottom: 0.375rem;
 }
 
-.summary-value {
+.delivery-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.delivery-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  margin-bottom: 0.125rem;
+}
+
+.delivery-text {
+  font-size: 0.875rem;
+  color: var(--color-stone);
+  line-height: 1.5;
+}
+
+.order-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.total-value {
   font-size: 2rem;
   font-weight: 700;
   color: var(--color-charcoal);
