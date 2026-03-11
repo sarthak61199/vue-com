@@ -5,19 +5,17 @@
   --color-mint-50: #edfbf6;
   --color-mint-100: #c8f0e2;
   --color-charcoal: #1a2028;
-  --color-charcoal-soft: #2c3440;
   --color-stone: #627280;
   --color-stone-light: #96a5ae;
   --color-cream: #f4f8f6;
   --color-border: #c2ded7;
 
   /* Typography */
-  --font-sans: 'Titillium Web', sans-serif;
+  --font-sans: "Titillium Web", sans-serif;
 
   /* Shadows */
   --shadow-card: 0 2px 8px rgba(26, 32, 40, 0.07);
   --shadow-card-hover: 0 10px 32px rgba(26, 32, 40, 0.14);
-  --shadow-header: 0 1px 0 #c2ded7;
 }
 
 /* ─── Reset ─────────────────────────────────────────── */
@@ -36,7 +34,7 @@ html {
 }
 
 body {
-  font-family: 'Titillium Web', sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--color-cream);
   color: var(--color-charcoal);
 }
@@ -61,9 +59,9 @@ button {
   font-family: inherit;
 }
 
-input[type='search']::-webkit-search-decoration,
-input[type='search']::-webkit-search-cancel-button,
-input[type='search']::-webkit-search-results-button,
-input[type='search']::-webkit-search-results-decoration {
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
   display: none;
 }
