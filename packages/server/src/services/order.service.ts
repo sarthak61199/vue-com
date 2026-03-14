@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js'
 import { ServiceError } from '../lib/errors.js'
+import { validatePromoCode, getAutoPromos, validatePromoInTransaction } from './promo.service.js'
 
 const orderItemInclude = {
   variant: {
@@ -10,15 +11,37 @@ const orderItemInclude = {
   },
 }
 
-export async function createOrder(userId: string, cartId: string, addressId?: string) {
+export async function createOrder(
+  userId: string,
+  cartId: string,
+  addressId?: string,
+  promoCode?: string,
+) {
   const cart = await prisma.cart.findUnique({
     where: { id: cartId },
-    include: { cartItems: { include: { variant: true } } },
+    include: {
+      cartItems: {
+        include: { variant: { include: { product: true } } },
+      },
+    },
   })
   if (!cart) throw new ServiceError(404, 'Cart not found')
   if (cart.cartItems.length === 0) throw new ServiceError(400, 'Cart is empty')
 
-  const total = cart.cartItems.reduce((sum, item) => sum + item.variant.price * item.quantity, 0)
+  const subtotal = cart.cartItems.reduce((sum, item) => sum + item.variant.price * item.quantity, 0)
+
+  // Resolve promo before entering the transaction (for early user-facing validation errors)
+  let resolvedPromoId: string | null = null
+
+  if (promoCode) {
+    const result = await validatePromoCode(promoCode, cart.cartItems, userId)
+    resolvedPromoId = result.promo.id
+  } else {
+    const autoPromos = await getAutoPromos(cart.cartItems, userId)
+    if (autoPromos.length > 0) {
+      resolvedPromoId = autoPromos[0].promo.id
+    }
+  }
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -33,11 +56,22 @@ export async function createOrder(userId: string, cartId: string, addressId?: st
         })
       }
 
+      // Re-validate promo inside transaction (race condition safety)
+      let discountAmount = 0
+      if (resolvedPromoId) {
+        const validated = await validatePromoInTransaction(resolvedPromoId, userId, cart.cartItems, tx)
+        discountAmount = validated.discountAmount
+      }
+
+      const total = Math.max(0, subtotal - discountAmount)
+
       const newOrder = await tx.order.create({
         data: {
           total,
+          discountAmount,
           userId,
           addressId: addressId ?? null,
+          promoId: resolvedPromoId,
           orderItems: {
             create: cart.cartItems.map((item) => ({
               variantId: item.variantId,
@@ -49,8 +83,16 @@ export async function createOrder(userId: string, cartId: string, addressId?: st
         include: {
           orderItems: { include: orderItemInclude },
           address: true,
+          promo: true,
         },
       })
+
+      // Record promo usage now that we have the order id
+      if (resolvedPromoId) {
+        await tx.promoUsage.create({
+          data: { promoId: resolvedPromoId, userId, orderId: newOrder.id },
+        })
+      }
 
       await tx.cartItem.deleteMany({ where: { cartId } })
       return newOrder
@@ -70,6 +112,7 @@ export async function getOrderById(orderId: string, userId: string) {
     include: {
       orderItems: { include: orderItemInclude },
       address: true,
+      promo: true,
     },
   })
   if (!order) throw new ServiceError(404, 'Order not found')
@@ -83,6 +126,7 @@ export async function getUserOrders(userId: string) {
     include: {
       orderItems: { include: orderItemInclude },
       address: true,
+      promo: true,
     },
     orderBy: { createdAt: 'desc' },
   })

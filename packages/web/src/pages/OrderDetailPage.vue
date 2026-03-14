@@ -77,7 +77,23 @@ onMounted(async () => {
             </div>
 
             <div class="order-total">
-              <span class="footer-label">Total</span>
+              <template v-if="orderStore.currentOrder.discountAmount > 0">
+                <span class="footer-label">Subtotal</span>
+                <span class="subtotal-value">
+                  {{ formatPrice(orderStore.currentOrder.orderItems.reduce((s, i) => s + i.price * i.quantity, 0)) }}
+                </span>
+                <span class="discount-label">
+                  Discount
+                  <span v-if="orderStore.currentOrder.promo" class="discount-code">
+                    {{ orderStore.currentOrder.promo.code ?? orderStore.currentOrder.promo.description }}
+                  </span>
+                </span>
+                <span class="discount-value">−{{ formatPrice(orderStore.currentOrder.discountAmount) }}</span>
+                <span class="footer-label footer-label--total">Total</span>
+              </template>
+              <template v-else>
+                <span class="footer-label">Total</span>
+              </template>
               <span class="total-value">{{ formatPrice(orderStore.currentOrder.total) }}</span>
             </div>
           </div>
@@ -268,6 +284,50 @@ onMounted(async () => {
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
+}
+
+.subtotal-value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  margin-bottom: 0.375rem;
+}
+
+.discount-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-mint-dark);
+  margin-top: 0.125rem;
+}
+
+.discount-code {
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  background: var(--color-mint-50);
+  border: 1px solid var(--color-mint-100);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  text-transform: uppercase;
+}
+
+.discount-value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-mint-dark);
+  margin-bottom: 0.625rem;
+}
+
+.footer-label--total {
+  margin-top: 0.25rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+  text-align: right;
 }
 
 .total-value {

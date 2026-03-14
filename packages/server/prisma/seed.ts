@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { PrismaClient } from './generated/client.js'
+import { PrismaClient, PromoScope, DiscountType } from './generated/client.js'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 
 const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! })
@@ -10,6 +10,7 @@ async function main() {
 
   await prisma.productVariantValue.deleteMany()
   await prisma.cartItem.deleteMany()
+  await prisma.promoUsage.deleteMany()
   await prisma.orderItem.deleteMany()
   await prisma.productVariant.deleteMany()
   await prisma.variantOption.deleteMany()
@@ -18,6 +19,7 @@ async function main() {
   await prisma.review.deleteMany()
   await prisma.order.deleteMany()
   await prisma.address.deleteMany()
+  await prisma.promo.deleteMany()
   await prisma.product.deleteMany()
   await prisma.category.deleteMany()
 
@@ -269,7 +271,74 @@ async function main() {
     await createDefaultVariant(product.id, data.price as number, stock)
   }
 
-  console.log(`Seeded products across 4 categories with variants and stock.`)
+  // --- Promos ---
+  const oneYearFromNow = new Date()
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1)
+
+  await Promise.all([
+    prisma.promo.create({
+      data: {
+        code: 'SAVE10',
+        description: '10% off your entire order',
+        discountType: DiscountType.PERCENTAGE,
+        discountValue: 10,
+        scope: PromoScope.ORDER,
+        maxUses: 100,
+        expiresAt: oneYearFromNow,
+        isActive: true,
+        isAutomatic: false,
+      },
+    }),
+    prisma.promo.create({
+      data: {
+        code: 'FLAT5',
+        description: '$5 off orders over $25',
+        discountType: DiscountType.FIXED,
+        discountValue: 5,
+        scope: PromoScope.ORDER,
+        minOrderAmount: 25,
+        isActive: true,
+        isAutomatic: false,
+      },
+    }),
+    prisma.promo.create({
+      data: {
+        code: 'FREESHIP',
+        description: 'Free shipping on orders over $50',
+        discountType: DiscountType.FREE_SHIPPING,
+        discountValue: 0,
+        scope: PromoScope.ORDER,
+        minOrderAmount: 50,
+        isActive: true,
+        isAutomatic: false,
+      },
+    }),
+    prisma.promo.create({
+      data: {
+        code: 'SUCCULENTS20',
+        description: '20% off Succulents & Cacti',
+        discountType: DiscountType.PERCENTAGE,
+        discountValue: 20,
+        scope: PromoScope.CATEGORY,
+        categoryId: succulents.id,
+        isActive: true,
+        isAutomatic: false,
+      },
+    }),
+    prisma.promo.create({
+      data: {
+        description: 'Automatic 5% off orders over $75',
+        discountType: DiscountType.PERCENTAGE,
+        discountValue: 5,
+        scope: PromoScope.ORDER,
+        minOrderAmount: 75,
+        isActive: true,
+        isAutomatic: true,
+      },
+    }),
+  ])
+
+  console.log(`Seeded products across 4 categories with variants, stock, and promos.`)
 }
 
 main()

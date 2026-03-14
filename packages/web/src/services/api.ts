@@ -153,9 +153,26 @@ export interface ApiAddress {
   createdAt: string
 }
 
+export interface ApiPromo {
+  id: string
+  code: string | null
+  description: string
+  discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING'
+  discountValue: number
+  scope: 'ORDER' | 'PRODUCT' | 'CATEGORY'
+}
+
+export interface ApiPromoValidation {
+  promo: ApiPromo
+  discountAmount: number
+}
+
 export interface ApiOrder {
   id: string
   total: number
+  discountAmount: number
+  promoId: string | null
+  promo?: ApiPromo | null
   userId: string
   addressId: string | null
   address?: ApiAddress | null
@@ -233,13 +250,22 @@ export const api = {
     request<{ success: boolean }>(`/wishlist/${productId}`, { method: 'DELETE' }),
 
   // Orders
-  createOrder: (cartId: string, addressId?: string) =>
+  createOrder: (cartId: string, addressId?: string, promoCode?: string) =>
     request<ApiOrder>('/orders', {
       method: 'POST',
-      body: JSON.stringify({ cartId, addressId }),
+      body: JSON.stringify({ cartId, addressId, promoCode }),
     }),
   getOrderById: (orderId: string) => request<ApiOrder>(`/orders/${orderId}`),
   getOrders: () => request<ApiOrder[]>('/orders'),
+
+  // Promos
+  validatePromo: (code: string, cartId: string) =>
+    request<ApiPromoValidation>('/promos/validate', {
+      method: 'POST',
+      body: JSON.stringify({ code, cartId }),
+    }),
+  getAutoPromos: (cartId: string) =>
+    request<ApiPromoValidation[]>(`/promos/auto?cartId=${cartId}`),
 
   // Addresses
   getAddresses: () => request<ApiAddress[]>('/addresses'),

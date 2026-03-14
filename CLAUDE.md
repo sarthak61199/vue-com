@@ -30,6 +30,7 @@ npm run seed         # tsx prisma/seed.ts (alternative to npx tsx)
 # Database (packages/server/)
 npx prisma migrate dev --name <name>   # create + apply migration
 npx prisma migrate reset               # wipe DB, re-apply all migrations + seed
+npx prisma generate                    # regenerate client after schema changes (SQLite enums need this)
 npx tsx prisma/seed.ts                 # run seed manually
 ```
 
@@ -55,7 +56,7 @@ All API types and the `api` object live in `src/services/api.ts`. Stores call th
 - **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
 - **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `categories`, `fetchProducts(filters: ProductFilters)`, `fetchCategories()`. No auto-fetch on creation; `HomePage` drives fetching. `fetchCategories()` is idempotent (skips if already loaded).
 - **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart({ variantId, quantity })`, `updateQuantity({ variantId, quantity })`, `removeFromCart(variantId)`, `clearCart`
-- **`useOrderStore`** — exposes `createOrder(cartId, addressId?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
+- **`useOrderStore`** — exposes `createOrder(cartId, addressId?, promoCode?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
 - **`useWishlistStore`** — no auto-init; exposes `items`, `wishlistedIds` (computed `Set<string>` for O(1) lookups), `fetchWishlist()`, `toggleWishlist(productId)`. `WishlistButton` lazy-fetches the wishlist on first click (tracked per-component via a `fetched` ref) so guest page loads incur no auth calls.
 - **`useAddressStore`** — no auto-init; exposes `items`, `loading`, `error`, `fetchAddresses()`, `createAddress(data)`, `deleteAddress(id)`. `createAddress` prepends to `items` on success; `deleteAddress` splices from `items`.
 
@@ -75,6 +76,9 @@ Key types in `src/services/api.ts`:
 - **`ApiProductVariant`** — `{ id, productId, price, stock, image, isDefault, values: ApiProductVariantValue[] }`
 - **`ApiCartItem`** — `{ cartId, variantId, quantity, variant: ApiProductVariant & { product: ApiProduct } }`. Access product via `cartItem.variant.product`, price via `cartItem.variant.price`.
 - **`ApiOrderItem`** — `{ orderId, variantId, quantity, price, variant: ApiProductVariant & { product: ApiProduct } }`. `price` is a snapshot taken at order creation time.
+- **`ApiOrder`** — includes `total`, `discountAmount`, `promoId`, `promo?: ApiPromo | null`, `orderItems`, `address`.
+- **`ApiPromo`** — `{ id, code: string | null, description, discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING', discountValue, scope: 'ORDER' | 'PRODUCT' | 'CATEGORY' }`
+- **`ApiPromoValidation`** — `{ promo: ApiPromo, discountAmount: number }` — returned by the validate endpoint.
 - **`ProductFilters`** — `{ page?, search?, categoryId?, minPrice?, maxPrice?, minRating?, excludeOutOfStock? }`
 
 ### Product Variants
@@ -129,7 +133,7 @@ Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-c
 
 ### Shared Schemas (`packages/schemas/`)
 
-Zod schemas shared between web and server. Server imports via `schemas` path alias (configured in `packages/server/tsconfig.json`). Exports: `RegisterSchema`, `LoginSchema`, `ChangePasswordSchema`, `ProductQuerySchema`, `CreateOrderSchema`, `AddCartItemSchema`, `UpdateCartItemSchema`, `CreateReviewSchema`, `AddWishlistItemSchema`, `CreateAddressSchema`.
+Zod schemas shared between web and server. Server imports via `schemas` path alias (configured in `packages/server/tsconfig.json`). Exports: `RegisterSchema`, `LoginSchema`, `ChangePasswordSchema`, `ProductQuerySchema`, `CreateOrderSchema`, `AddCartItemSchema`, `UpdateCartItemSchema`, `CreateReviewSchema`, `AddWishlistItemSchema`, `CreateAddressSchema`, `ValidatePromoSchema`.
 
 All server routes validate requests using the `validate()` helper from `src/lib/validate.ts` — wraps `@hono/zod-validator`, returns 400 with first error message on failure. Pattern:
 ```ts
@@ -149,6 +153,7 @@ One service file per domain:
 - `category.service.ts` — getAllCategories
 - `order.service.ts` — createOrder (atomic stock decrement transaction), getOrderById (ownership check), getUserOrders
 - `product.service.ts` — listProducts (filter/enrichment pipeline), getProductById
+- `promo.service.ts` — validatePromoCode, getAutoPromos, validatePromoInTransaction
 - `review.service.ts` — getProductReviews, getReviewEligibility, upsertReview (returns `{ review, isNew }` to distinguish 201/200)
 - `wishlist.service.ts` — get/add/remove with `.map()` transform to inject `defaultVariantId`
 
@@ -185,15 +190,33 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 - `POST /api/carts`; `GET /api/carts/:id` — includes `cartItems → variant → product` and `variant → values → option`
 - `POST /api/carts/:id/items` — body `{ variantId, quantity }`, upserts (increments qty); rejects with 400 if `currentQtyInCart + quantity > variant.stock`
 - `PATCH /api/carts/:id/items/:variantId` — set quantity; rejects with 400 if `quantity > variant.stock`; `DELETE /api/carts/:id/items/:variantId`
-- `POST /api/orders` — body `{ cartId, addressId? }`; calculates total from `variant.price`; snapshots price into each `OrderItem.price`; atomically decrements `stock` per variant; rolls back with 400 if any variant has insufficient stock; clears cart in same transaction
-- `GET /api/orders`; `GET /api/orders/:id` — includes `orderItems → variant → product` and `variant → values → option`
+- `POST /api/orders` — body `{ cartId, addressId?, promoCode? }`; resolves promo before transaction, re-validates inside transaction; calculates `total = subtotal - discountAmount`; snapshots price into each `OrderItem.price`; atomically decrements stock; clears cart; returns order with `promo` included
+- `GET /api/orders`; `GET /api/orders/:id` — includes `orderItems → variant → product`, `variant → values → option`, and `promo`
 - `GET /api/addresses`; `POST /api/addresses` — body `{ label?, line1, line2?, city, state, zip, country? }`; `DELETE /api/addresses/:id` — ownership-checked
 - `GET /api/reviews/product/:productId`; `GET /api/reviews/eligibility/:productId` — checks `orderItem.variant.productId` (purchase required); `POST /api/reviews` — body `{ productId, rating (1–5), body? }`; upserts
 - `GET /api/wishlist` — returns items with product (includes `defaultVariantId`); `POST /api/wishlist` — body `{ productId }`; `DELETE /api/wishlist/:productId`
+- `POST /api/promos/validate` (requires auth) — body `{ code, cartId }`; returns `{ promo, discountAmount }` or 400 with reason
+- `GET /api/promos/auto?cartId=X` (requires auth) — returns array of `{ promo, discountAmount }` for applicable automatic promos, sorted by discount descending
+
+### Promo System
+
+Promos support two application modes:
+- **Manual codes** — user enters a code at checkout; validated via `POST /api/promos/validate` before order placement
+- **Automatic** — `isAutomatic: true`, no code; applied server-side by `getAutoPromos()` when no manual code is provided; the best one (highest discount) is selected
+
+Three discount types (`DiscountType` enum): `PERCENTAGE`, `FIXED`, `FREE_SHIPPING`. `FREE_SHIPPING` returns `discountAmount: 0` — the shipping waiver is a frontend concern. Three scopes (`PromoScope` enum): `ORDER` (entire subtotal), `PRODUCT` (items matching `productId`), `CATEGORY` (items matching `categoryId`).
+
+Promo validation happens **twice** when placing an order: once before the transaction (for early user-facing errors), and again inside the `$transaction` via `validatePromoInTransaction` (for race condition safety). `PromoUsage` is created inside the transaction after the order is created so the real `orderId` is available.
+
+Constraints checked in order: `isActive`, expiry, `minOrderAmount`, scope eligibility (matching items exist), global `maxUses`, per-user `maxUsesPerUser`.
+
+Promos are managed via seed data / direct DB — there is no admin UI.
 
 ### Database
 
 Prisma with **better-sqlite3** adapter. Schema in `packages/server/prisma/schema.prisma`. Generated client outputs to `prisma/generated/`.
+
+SQLite does not have native enum support. Prisma enums (`PromoScope`, `DiscountType`) are stored as TEXT but enforced at the application layer. After adding/changing enums, run `npx prisma generate` — a migration may not be required but the client must be regenerated.
 
 **Models:**
 
@@ -205,9 +228,11 @@ Prisma with **better-sqlite3** adapter. Schema in `packages/server/prisma/schema
 - `ProductVariantValue` — join table (composite PK: `[variantId, optionId]`) linking ProductVariant to VariantOption
 - `CartItem` — composite PK `[cartId, variantId]`; quantity only
 - `OrderItem` — composite PK `[orderId, variantId]`; stores `quantity` and `price` snapshot
-- `Order` — has `userId` FK, optional `addressId` FK, `total` (calculated at creation)
+- `Order` — has `userId` FK, optional `addressId` FK, `total`, `discountAmount` (default 0), optional `promoId` FK
+- `Promo` — `code` (unique, nullable for automatic promos), `discountType` (`DiscountType`), `discountValue`, `scope` (`PromoScope`), optional `productId`/`categoryId` for scoped promos, `minOrderAmount?`, `maxUses?`, `maxUsesPerUser?`, `expiresAt?`, `isActive`, `isAutomatic`
+- `PromoUsage` — `@@unique([promoId, orderId])`; `@@index([promoId, userId])` for per-user count queries
 - `User`, `Session` (7-day expiry), `Review` (`@@unique([userId, productId])`), `WishlistItem` (composite PK `[userId, productId]`), `Address`
 
 `DATABASE_URL` is set in `packages/server/.env` (default: `file:./dev.db`).
 
-After schema changes: `npx prisma migrate dev --name <migration-name>` from `packages/server/`. The seed (`prisma/seed.ts`) creates 3 products with Pot Size + Pot Color variants (sparse combinations) and 9 simple products with single default variants.
+After schema changes: `npx prisma migrate dev --name <migration-name>` from `packages/server/`. The seed (`prisma/seed.ts`) creates 3 products with Pot Size + Pot Color variants (sparse combinations), 9 simple products with single default variants, and 5 promos: `SAVE10` (10% off), `FLAT5` ($5 off $25+), `FREESHIP` (free shipping $50+), `SUCCULENTS20` (20% off Succulents & Cacti category), and an automatic 5% discount on orders over $75.

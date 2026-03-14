@@ -11,6 +11,7 @@ model Category {
   id       String    @id @default(uuid())
   name     String    @unique
   products Product[]
+  promos   Promo[]
 
   @@map("categories")
 }
@@ -29,6 +30,7 @@ model Product {
   variants      ProductVariant[]
   reviews       Review[]
   wishlistItems WishlistItem[]
+  promos        Promo[]
 
   @@index([categoryId])
   @@map("products")
@@ -96,6 +98,7 @@ model User {
   reviews       Review[]
   wishlistItems WishlistItem[]
   addresses     Address[]
+  promoUsages   PromoUsage[]
 
   @@map("users")
 }
@@ -112,15 +115,19 @@ model Session {
 }
 
 model Order {
-  id         String      @id @default(uuid())
-  total      Float
-  userId     String
-  user       User        @relation(fields: [userId], references: [id])
-  addressId  String?
-  address    Address?    @relation(fields: [addressId], references: [id])
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  orderItems OrderItem[]
+  id             String      @id @default(uuid())
+  total          Float
+  discountAmount Float       @default(0)
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  addressId      String?
+  address        Address?    @relation(fields: [addressId], references: [id])
+  promoId        String?
+  promo          Promo?      @relation(fields: [promoId], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  orderItems     OrderItem[]
+  promoUsage     PromoUsage?
 
   @@index([userId])
   @@map("orders")
@@ -204,4 +211,55 @@ model WishlistItem {
   @@id([userId, productId])
   @@index([userId])
   @@map("wishlist_items")
+}
+
+enum PromoScope {
+  ORDER
+  PRODUCT
+  CATEGORY
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+  FREE_SHIPPING
+}
+
+model Promo {
+  id             String       @id @default(uuid())
+  code           String?      @unique
+  description    String
+  discountType   DiscountType
+  discountValue  Float        @default(0)
+  scope          PromoScope   @default(ORDER)
+  productId      String?
+  product        Product?     @relation(fields: [productId], references: [id])
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+  minOrderAmount Float?
+  maxUses        Int?
+  maxUsesPerUser Int?
+  expiresAt      DateTime?
+  isActive       Boolean      @default(true)
+  isAutomatic    Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  usages         PromoUsage[]
+  orders         Order[]
+
+  @@map("promos")
+}
+
+model PromoUsage {
+  id        String   @id @default(uuid())
+  promoId   String
+  promo     Promo    @relation(fields: [promoId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([promoId, userId])
+  @@map("promo_usages")
 }
