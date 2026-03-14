@@ -10,6 +10,13 @@
   --color-cream: #f4f8f6;
   --color-border: #c2ded7;
 
+  /* Semantic status colors */
+  --color-sale: #c0392b;
+  --color-sale-bg: #fdf0ef;
+  --color-error: #d94f4f;
+  --color-warning: #b45309;
+  --color-oos: #b91c1c;
+
   /* Typography */
   --font-sans: "Titillium Web", sans-serif;
 

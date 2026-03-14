@@ -1,13 +1,44 @@
 <script setup lang="ts">
 import { IMAGE } from '@/constants'
-import type { ApiProduct } from '@/services/api'
+import type { ApiProduct, ApiDisplayPromo } from '@/services/api'
 import { formatPrice } from '@/utils/format'
+import { usePromoStore } from '@/stores/promo'
+import { computed } from 'vue'
 import StarRating from '@/components/StarRating.vue'
 import WishlistButton from '@/components/WishlistButton.vue'
 
-defineProps<{
+const props = defineProps<{
   product: ApiProduct
 }>()
+
+const promoStore = usePromoStore()
+
+const activePromo = computed<ApiDisplayPromo | null>(() =>
+  promoStore.getPromoForProduct(props.product),
+)
+
+const saleMin = computed(() =>
+  activePromo.value && props.product.priceRange
+    ? promoStore.getDiscountedPrice(props.product.priceRange.min, activePromo.value)
+    : null,
+)
+const saleMax = computed(() =>
+  activePromo.value && props.product.priceRange
+    ? promoStore.getDiscountedPrice(props.product.priceRange.max, activePromo.value)
+    : null,
+)
+const saleFlat = computed(() =>
+  activePromo.value && !(props.product.priceRange && props.product.priceRange.min !== props.product.priceRange.max)
+    ? promoStore.getDiscountedPrice(props.product.price, activePromo.value)
+    : null,
+)
+
+const badgeLabel = computed(() => {
+  if (!activePromo.value) return null
+  if (activePromo.value.discountType === 'PERCENTAGE') return `-${activePromo.value.discountValue}%`
+  if (activePromo.value.discountType === 'FIXED') return `-$${activePromo.value.discountValue}`
+  return null
+})
 </script>
 
 <template>
@@ -15,6 +46,7 @@ defineProps<{
     <div class="product-image-wrap">
       <img :src="product.image || IMAGE" :alt="product.name" class="product-image" />
       <WishlistButton :product-id="product.id" class="wishlist-overlay" />
+      <span v-if="badgeLabel" class="sale-badge">{{ badgeLabel }}</span>
     </div>
     <div class="product-info">
       <div class="product-name-row">
@@ -30,10 +62,12 @@ defineProps<{
       <div class="product-footer">
         <span class="product-price">
           <template v-if="product.priceRange && product.priceRange.min !== product.priceRange.max">
-            From {{ formatPrice(product.priceRange.min) }}
+            <span v-if="saleMin !== null" class="price-original">From {{ formatPrice(product.priceRange.min) }}</span>
+            <span :class="saleMin !== null ? 'price-sale' : ''">From {{ formatPrice(saleMin ?? product.priceRange.min) }}</span>
           </template>
           <template v-else>
-            {{ formatPrice(product.price) }}
+            <span v-if="saleFlat !== null" class="price-original">{{ formatPrice(product.price) }}</span>
+            <span :class="saleFlat !== null ? 'price-sale' : ''">{{ formatPrice(saleFlat ?? product.price) }}</span>
           </template>
         </span>
         <span class="product-cta">View →</span>
@@ -132,6 +166,35 @@ defineProps<{
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-charcoal);
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.price-original {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-stone);
+  text-decoration: line-through;
+}
+
+.price-sale {
+  color: var(--color-sale);
+}
+
+.sale-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: var(--color-sale);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  text-transform: uppercase;
 }
 
 .product-cta {

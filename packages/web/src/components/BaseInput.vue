@@ -81,7 +81,7 @@ defineEmits<{
 
 /* Error state */
 .base-input--error {
-  border-color: #d94f4f;
+  border-color: var(--color-error);
   box-shadow: 0 0 0 3px rgba(217, 79, 79, 0.1);
 }
 </style>

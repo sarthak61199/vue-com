@@ -168,7 +168,7 @@ const handleSubmit = async () => {
 
 .error-msg {
   font-size: 0.875rem;
-  color: #d94f4f;
+  color: var(--color-error);
   font-weight: 700;
 }
 

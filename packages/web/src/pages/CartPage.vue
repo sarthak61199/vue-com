@@ -170,12 +170,12 @@ const hasStockIssue = computed(() =>
 .cart-item-stock-warn {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #b45309;
+  color: var(--color-warning);
   margin-top: 0.25rem;
 }
 
 .cart-item-stock-warn--oos {
-  color: #b91c1c;
+  color: var(--color-oos);
 }
 
 .cart-item-right {

@@ -153,6 +153,17 @@ export interface ApiAddress {
   createdAt: string
 }
 
+// Lightweight promo used for displaying sale prices on product listings/pages (no auth needed)
+export interface ApiDisplayPromo {
+  id: string
+  description: string
+  discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING'
+  discountValue: number
+  scope: 'PRODUCT' | 'CATEGORY'
+  productId: string | null
+  categoryId: string | null
+}
+
 export interface ApiPromo {
   id: string
   code: string | null
@@ -266,6 +277,7 @@ export const api = {
     }),
   getAutoPromos: (cartId: string) =>
     request<ApiPromoValidation[]>(`/promos/auto?cartId=${cartId}`),
+  getDisplayPromos: () => request<ApiDisplayPromo[]>('/promos/display'),
 
   // Addresses
   getAddresses: () => request<ApiAddress[]>('/addresses'),

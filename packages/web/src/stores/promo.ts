@@ -1,10 +1,11 @@
-import { api, type ApiPromoValidation } from '@/services/api'
+import { api, type ApiPromoValidation, type ApiDisplayPromo, type ApiProduct } from '@/services/api'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const usePromoStore = defineStore('promo', () => {
   const appliedPromo = ref<ApiPromoValidation | null>(null)
   const autoPromos = ref<ApiPromoValidation[]>([])
+  const displayPromos = ref<ApiDisplayPromo[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -36,6 +37,30 @@ export const usePromoStore = defineStore('promo', () => {
     }
   }
 
+  async function fetchDisplayPromos() {
+    try {
+      displayPromos.value = await api.getDisplayPromos()
+    } catch {
+      // silently ignore
+    }
+  }
+
+  function getDiscountedPrice(price: number, promo: ApiDisplayPromo): number {
+    if (promo.discountType === 'PERCENTAGE') return price * (1 - promo.discountValue / 100)
+    if (promo.discountType === 'FIXED') return Math.max(0, price - promo.discountValue)
+    return price
+  }
+
+  function getPromoForProduct(product: ApiProduct): ApiDisplayPromo | null {
+    return (
+      displayPromos.value.find(
+        (p) =>
+          (p.scope === 'PRODUCT' && p.productId === product.id) ||
+          (p.scope === 'CATEGORY' && p.categoryId === product.categoryId),
+      ) ?? null
+    )
+  }
+
   function clearPromo() {
     appliedPromo.value = null
     error.value = null
@@ -48,5 +73,19 @@ export const usePromoStore = defineStore('promo', () => {
     error.value = null
   }
 
-  return { appliedPromo, autoPromos, loading, error, activeDiscount, validateCode, fetchAutoPromos, clearPromo, reset }
+  return {
+    appliedPromo,
+    autoPromos,
+    displayPromos,
+    loading,
+    error,
+    activeDiscount,
+    validateCode,
+    fetchAutoPromos,
+    fetchDisplayPromos,
+    getPromoForProduct,
+    getDiscountedPrice,
+    clearPromo,
+    reset,
+  }
 })

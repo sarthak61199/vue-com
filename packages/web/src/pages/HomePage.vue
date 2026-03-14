@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
+import { usePromoStore } from '@/stores/promo'
 import { useDebounce } from '@/composables/useDebounce'
 import ProductCard from '@/components/ProductCard.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
@@ -14,6 +15,7 @@ const PAGE_SIZE = 9
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+const promoStore = usePromoStore()
 
 // --- URL-derived state ---
 const currentPage = computed(() => {
@@ -120,7 +122,10 @@ const hasActiveFilters = computed(
     currentExcludeOutOfStock.value,
 )
 
-onMounted(() => productStore.fetchCategories())
+onMounted(() => {
+  productStore.fetchCategories()
+  promoStore.fetchDisplayPromos()
+})
 </script>
 
 <template>

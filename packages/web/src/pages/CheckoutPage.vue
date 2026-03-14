@@ -646,12 +646,12 @@ const createOrder = async () => {
 .summary-item-stock-warn {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #b45309;
+  color: var(--color-warning);
   margin-top: 0.125rem;
 }
 
 .summary-item-stock-warn--oos {
-  color: #b91c1c;
+  color: var(--color-oos);
 }
 
 .summary-item-price {
@@ -748,7 +748,7 @@ const createOrder = async () => {
 .promo-error {
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #d94f4f;
+  color: var(--color-error);
 }
 
 /* Totals */
@@ -809,7 +809,7 @@ const createOrder = async () => {
 .order-error {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #d94f4f;
+  color: var(--color-error);
   margin-bottom: 0.75rem;
 }
 

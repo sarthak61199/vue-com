@@ -129,7 +129,7 @@ const submit = async () => {
 .form-error {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #d94f4f;
+  color: var(--color-error);
 }
 
 .form-actions {

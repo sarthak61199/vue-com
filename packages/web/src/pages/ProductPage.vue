@@ -2,6 +2,7 @@
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { useWishlistStore } from '@/stores/wishlist'
+import { usePromoStore } from '@/stores/promo'
 import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
 import { api, type ApiProduct, type ApiProductVariant } from '@/services/api'
@@ -18,6 +19,7 @@ const router = useRouter()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const wishlistStore = useWishlistStore()
+const promoStore = usePromoStore()
 
 const productId = route.params.id as string
 const product = ref<ApiProduct | null>(null)
@@ -69,6 +71,19 @@ const allTypesSelected = computed(
 
 const displayPrice = computed(() => selectedVariant.value?.price ?? product.value?.price ?? 0)
 const displayImage = computed(() => selectedVariant.value?.image ?? product.value?.image ?? null)
+
+const activePromo = computed(() =>
+  product.value ? promoStore.getPromoForProduct(product.value) : null,
+)
+const salePrice = computed(() =>
+  activePromo.value ? promoStore.getDiscountedPrice(displayPrice.value, activePromo.value) : null,
+)
+const saleBadgeLabel = computed(() => {
+  if (!activePromo.value) return null
+  if (activePromo.value.discountType === 'PERCENTAGE') return `-${activePromo.value.discountValue}%`
+  if (activePromo.value.discountType === 'FIXED') return `-$${activePromo.value.discountValue}`
+  return null
+})
 
 const selectedStock = computed(() => selectedVariant.value?.stock ?? null)
 const isOutOfStock = computed(() => selectedStock.value !== null && selectedStock.value <= 0)
@@ -145,7 +160,11 @@ async function refreshProduct() {
         <div class="product-details">
           <p class="product-label">Product</p>
           <h1 class="product-name">{{ product.name }}</h1>
-          <p class="product-price">{{ formatPrice(displayPrice) }}</p>
+          <div class="product-price-wrap">
+            <span v-if="salePrice !== null" class="product-price product-price--original">{{ formatPrice(displayPrice) }}</span>
+            <span class="product-price" :class="{ 'product-price--sale': salePrice !== null }">{{ formatPrice(salePrice ?? displayPrice) }}</span>
+            <span v-if="saleBadgeLabel" class="product-sale-badge">{{ saleBadgeLabel }}</span>
+          </div>
           <div v-if="product.averageRating != null" class="product-rating">
             <StarRating :rating="product.averageRating" :count="product.reviewCount" size="md" />
           </div>
@@ -298,6 +317,14 @@ async function refreshProduct() {
   margin-bottom: 1.25rem;
 }
 
+.product-price-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
 .product-price {
   font-size: 1.625rem;
   font-weight: 700;
@@ -308,7 +335,34 @@ async function refreshProduct() {
   background: var(--color-mint-50);
   border-left: 3px solid var(--color-mint);
   border-radius: 0 8px 8px 0;
-  margin-bottom: 1.5rem;
+}
+
+.product-price--original {
+  font-size: 1.125rem;
+  color: var(--color-stone);
+  text-decoration: line-through;
+  background: none;
+  border-left: none;
+  padding: 0.5rem 0;
+  border-radius: 0;
+}
+
+.product-price--sale {
+  color: var(--color-sale);
+  background: var(--color-sale-bg);
+  border-left-color: var(--color-sale);
+}
+
+.product-sale-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--color-sale);
+  color: white;
+  padding: 0.25em 0.6em;
+  border-radius: 4px;
+  text-transform: uppercase;
+  align-self: center;
 }
 
 .product-rating {
@@ -380,7 +434,7 @@ async function refreshProduct() {
 .variant-unavailable {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #c0392b;
+  color: var(--color-sale);
 }
 
 .stock-status {
@@ -405,12 +459,12 @@ async function refreshProduct() {
 
 .stock-badge--low {
   background: #fff4e5;
-  color: #b45309;
+  color: var(--color-warning);
 }
 
 .stock-badge--oos {
   background: #fee2e2;
-  color: #b91c1c;
+  color: var(--color-oos);
 }
 
 .qty-wrap {

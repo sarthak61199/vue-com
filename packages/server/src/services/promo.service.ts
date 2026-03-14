@@ -150,6 +150,26 @@ export async function getAutoPromos(
   return results.sort((a, b) => b.discountAmount - a.discountAmount)
 }
 
+export async function getDisplayPromos() {
+  const now = new Date()
+  return prisma.promo.findMany({
+    where: {
+      isActive: true,
+      scope: { in: [PromoScope.PRODUCT, PromoScope.CATEGORY] },
+      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }],
+    },
+    select: {
+      id: true,
+      description: true,
+      discountType: true,
+      discountValue: true,
+      scope: true,
+      productId: true,
+      categoryId: true,
+    },
+  })
+}
+
 // Validates and calculates discount inside a transaction (for race condition safety).
 // Does NOT create the PromoUsage record — caller must do that after order creation.
 export async function validatePromoInTransaction(

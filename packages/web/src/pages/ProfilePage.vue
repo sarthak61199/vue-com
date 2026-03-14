@@ -420,7 +420,7 @@ const memberSince = computed(() => {
 }
 
 .error-msg {
-  color: #d94f4f;
+  color: var(--color-error);
 }
 
 .success-msg {

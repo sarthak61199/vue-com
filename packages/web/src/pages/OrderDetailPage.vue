@@ -346,7 +346,7 @@ onMounted(async () => {
 }
 
 .error-msg {
-  color: #d94f4f;
+  color: var(--color-error);
 }
 
 @media (max-width: 640px) {

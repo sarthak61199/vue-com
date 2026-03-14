@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import type { AuthEnv } from '../types/auth.js'
 import { validate } from '../lib/validate.js'
 import { ValidatePromoSchema } from 'schemas'
-import { validatePromoCode, getAutoPromos } from '../services/promo.service.js'
+import { validatePromoCode, getAutoPromos, getDisplayPromos } from '../services/promo.service.js'
 import { handleServiceError } from '../lib/errors.js'
 import { ServiceError } from '../lib/errors.js'
 import prisma from '../lib/prisma.js'
@@ -54,6 +54,11 @@ promos.get('/auto', requireAuth, async (c) => {
   } catch (err) {
     return handleServiceError(err, c)
   }
+})
+
+promos.get('/display', async (c) => {
+  const displayPromos = await getDisplayPromos()
+  return c.json(displayPromos)
 })
 
 export default promos

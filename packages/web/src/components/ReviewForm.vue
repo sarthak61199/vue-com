@@ -138,6 +138,6 @@ function handleSubmit() {
 
 .error-msg {
   font-size: 0.875rem;
-  color: #c0392b;
+  color: var(--color-error);
 }
 </style>
