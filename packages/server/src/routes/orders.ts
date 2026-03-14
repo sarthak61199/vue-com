@@ -11,7 +11,7 @@ const orders = new Hono<AuthEnv>()
 orders.post('/', requireAuth, validate('json', CreateOrderSchema), async (c) => {
   try {
     const body = c.req.valid('json')
-    const order = await createOrder(c.get('userId'), body.cartId, body.addressId, body.promoCode)
+    const order = await createOrder(c.get('userId'), body.cartId, body.addressId, body.promoCode, body.shippingCost)
     return c.json(order, 201)
   } catch (err) {
     return handleServiceError(err, c)

@@ -118,6 +118,7 @@ model Order {
   id             String      @id @default(uuid())
   total          Float
   discountAmount Float       @default(0)
+  shippingCost   Float       @default(0)
   userId         String
   user           User        @relation(fields: [userId], references: [id])
   addressId      String?

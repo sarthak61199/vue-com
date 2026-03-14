@@ -16,6 +16,7 @@ export async function createOrder(
   cartId: string,
   addressId?: string,
   promoCode?: string,
+  shippingCost = 0,
 ) {
   const cart = await prisma.cart.findUnique({
     where: { id: cartId },
@@ -63,12 +64,13 @@ export async function createOrder(
         discountAmount = validated.discountAmount
       }
 
-      const total = Math.max(0, subtotal - discountAmount)
+      const total = Math.max(0, subtotal - discountAmount) + shippingCost
 
       const newOrder = await tx.order.create({
         data: {
           total,
           discountAmount,
+          shippingCost,
           userId,
           addressId: addressId ?? null,
           promoId: resolvedPromoId,

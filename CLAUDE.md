@@ -43,7 +43,7 @@ Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Pinia** — stores in `src/stores/`
 - **`@` alias** resolves to `src/`
 
-`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage, requires auth), `/success` (SuccessPage), `/profile` (redirect → `/profile/info`), `/profile/info` | `/profile/password` | `/profile/orders` | `/profile/addresses` (ProfilePage, requires auth), `/profile/orders/:id` (OrderDetailPage, requires auth), `/wishlist` (WishlistPage, requires auth), `/login` (LoginPage, guest only), `/register` (RegisterPage, guest only).
+`src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage, requires auth), `/success` (SuccessPage), `/profile` (redirect → `/profile/info`), `/profile/info` | `/profile/password` | `/profile/orders` | `/profile/addresses` (ProfilePage, requires auth), `/profile/orders/:id` (OrderDetailPage, requires auth), `/wishlist` (WishlistPage, requires auth), `/login` (LoginPage, guest only), `/register` (RegisterPage, guest only), `/:pathMatch(.*)*` (NotFoundPage).
 
 `/profile/orders/:id` is registered before `/profile/:tab` in the router so it takes priority over the catch-all tab param.
 
@@ -59,10 +59,13 @@ All API types and the `api` object live in `src/services/api.ts`. Stores call th
 - **`useOrderStore`** — exposes `createOrder(cartId, addressId?, promoCode?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
 - **`useWishlistStore`** — no auto-init; exposes `items`, `wishlistedIds` (computed `Set<string>` for O(1) lookups), `fetchWishlist()`, `toggleWishlist(productId)`. `WishlistButton` lazy-fetches the wishlist on first click (tracked per-component via a `fetched` ref) so guest page loads incur no auth calls.
 - **`useAddressStore`** — no auto-init; exposes `items`, `loading`, `error`, `fetchAddresses()`, `createAddress(data)`, `deleteAddress(id)`. `createAddress` prepends to `items` on success; `deleteAddress` splices from `items`.
+- **`usePromoStore`** — no auto-init; exposes `appliedPromo`, `autoPromos`, `displayPromos`, `activeDiscount` (computed: manual code takes priority over best auto promo), `validateCode(code, cartId)`, `fetchAutoPromos(cartId)`, `fetchDisplayPromos()`, `getPromoForProduct(product)` (returns matching `ApiDisplayPromo` for product/category scope), `getDiscountedPrice(price, promo)`, `clearPromo()`, `reset()`. Used by `CheckoutPage` for code entry and by product display components for sale prices.
 
 `ProfilePage` (`/profile/:tab`) is the user hub with four tabs: **info** (read-only email + join date), **password** (change password form using `api.changePassword()`), **orders** (order list, lazy-fetched only when the tab is first visited via `watch` on `route.params.tab`), and **addresses** (saved delivery addresses, also lazy-fetched on first visit).
 
 `src/constants.ts` exports `IMAGE` — a placeholder image URL used across product displays.
+
+`src/utils/format.ts` exports two helpers used throughout the app: `formatPrice(amount: number)` (formats as `$X.XX`) and `getVariantLabel(variant)` (joins option values with ` / `).
 
 Font: **Titillium Web** (400 & 700 weights) via `@fontsource/titillium-web` in `App.vue`.
 
@@ -79,6 +82,7 @@ Key types in `src/services/api.ts`:
 - **`ApiOrder`** — includes `total`, `discountAmount`, `promoId`, `promo?: ApiPromo | null`, `orderItems`, `address`.
 - **`ApiPromo`** — `{ id, code: string | null, description, discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING', discountValue, scope: 'ORDER' | 'PRODUCT' | 'CATEGORY' }`
 - **`ApiPromoValidation`** — `{ promo: ApiPromo, discountAmount: number }` — returned by the validate endpoint.
+- **`ApiDisplayPromo`** — `{ id, description, discountType, discountValue, scope: 'PRODUCT' | 'CATEGORY', productId: string | null, categoryId: string | null }` — lightweight promo for showing sale prices on listings/product pages; no auth required.
 - **`ProductFilters`** — `{ page?, search?, categoryId?, minPrice?, maxPrice?, minRating?, excludeOutOfStock? }`
 
 ### Product Variants
@@ -87,10 +91,7 @@ Every product has at least one `ProductVariant` (simple products get a single de
 
 **ProductPage variant selector** — for products with `variantTypes`, renders pill buttons per type. Selection is stored in URL query params (key = slugified type name, e.g. `pot-size`, value = optionId). On mount, auto-initialises params from the default variant. `selectedVariant` is computed by matching selected option IDs against `product.variants`. If a selected combination has no matching variant, the Add to Cart button is disabled.
 
-Variant label helper pattern (used in cart, checkout, orders):
-```ts
-variant.values.map(v => v.option.value).join(' / ')  // e.g. "Medium (6") / Terracotta"
-```
+Variant label helper — use `getVariantLabel(variant)` from `src/utils/format.ts` (used in cart, checkout, orders). Returns `"Medium (6\") / Terracotta"` style strings.
 
 **Stock display patterns** — `ProductPage` computes `selectedStock`, `isOutOfStock` (stock ≤ 0), `isLowStock` (stock 1–5) from `selectedVariant.stock`; shows inline status and disables Add to Cart when OOS; passes `disableMinus`/`disablePlus` to `QuantityStepper` based on quantity bounds, OOS state, and variant availability. `CartPage` and `CheckoutPage` both compute `hasStockIssue` (any item where `quantity > variant.stock` or stock = 0) to disable the proceed/place-order button and surface per-item warnings.
 
@@ -197,6 +198,7 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 - `GET /api/wishlist` — returns items with product (includes `defaultVariantId`); `POST /api/wishlist` — body `{ productId }`; `DELETE /api/wishlist/:productId`
 - `POST /api/promos/validate` (requires auth) — body `{ code, cartId }`; returns `{ promo, discountAmount }` or 400 with reason
 - `GET /api/promos/auto?cartId=X` (requires auth) — returns array of `{ promo, discountAmount }` for applicable automatic promos, sorted by discount descending
+- `GET /api/promos/display` (no auth) — returns `ApiDisplayPromo[]` for active PRODUCT/CATEGORY scoped promos; used to show sale prices on product listings and product pages
 
 ### Promo System
 

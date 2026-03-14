@@ -77,18 +77,24 @@ onMounted(async () => {
             </div>
 
             <div class="order-total">
-              <template v-if="orderStore.currentOrder.discountAmount > 0">
+              <template v-if="orderStore.currentOrder.discountAmount > 0 || orderStore.currentOrder.shippingCost > 0">
                 <span class="footer-label">Subtotal</span>
                 <span class="subtotal-value">
                   {{ formatPrice(orderStore.currentOrder.orderItems.reduce((s, i) => s + i.price * i.quantity, 0)) }}
                 </span>
-                <span class="discount-label">
-                  Discount
-                  <span v-if="orderStore.currentOrder.promo" class="discount-code">
-                    {{ orderStore.currentOrder.promo.code ?? orderStore.currentOrder.promo.description }}
+                <template v-if="orderStore.currentOrder.discountAmount > 0">
+                  <span class="discount-label">
+                    Discount
+                    <span v-if="orderStore.currentOrder.promo" class="discount-code">
+                      {{ orderStore.currentOrder.promo.code ?? orderStore.currentOrder.promo.description }}
+                    </span>
                   </span>
-                </span>
-                <span class="discount-value">−{{ formatPrice(orderStore.currentOrder.discountAmount) }}</span>
+                  <span class="discount-value">−{{ formatPrice(orderStore.currentOrder.discountAmount) }}</span>
+                </template>
+                <template v-if="orderStore.currentOrder.shippingCost > 0">
+                  <span class="footer-label">Shipping</span>
+                  <span class="subtotal-value">{{ formatPrice(orderStore.currentOrder.shippingCost) }}</span>
+                </template>
                 <span class="footer-label footer-label--total">Total</span>
               </template>
               <template v-else>

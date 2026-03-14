@@ -182,6 +182,7 @@ export interface ApiOrder {
   id: string
   total: number
   discountAmount: number
+  shippingCost: number
   promoId: string | null
   promo?: ApiPromo | null
   userId: string
@@ -261,10 +262,10 @@ export const api = {
     request<{ success: boolean }>(`/wishlist/${productId}`, { method: 'DELETE' }),
 
   // Orders
-  createOrder: (cartId: string, addressId?: string, promoCode?: string) =>
+  createOrder: (cartId: string, addressId?: string, promoCode?: string, shippingCost?: number) =>
     request<ApiOrder>('/orders', {
       method: 'POST',
-      body: JSON.stringify({ cartId, addressId, promoCode }),
+      body: JSON.stringify({ cartId, addressId, promoCode, shippingCost }),
     }),
   getOrderById: (orderId: string) => request<ApiOrder>(`/orders/${orderId}`),
   getOrders: () => request<ApiOrder[]>('/orders'),

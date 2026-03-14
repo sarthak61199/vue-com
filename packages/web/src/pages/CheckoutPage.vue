@@ -119,6 +119,7 @@ const createOrder = async () => {
     cartStore.cartId!,
     selectedAddressId.value ?? undefined,
     promoCode,
+    shippingCost.value,
   )
   if (!orderId) return
 
@@ -147,20 +148,11 @@ const createOrder = async () => {
 
             <div v-else class="address-options">
               <!-- Saved addresses -->
-              <label
-                v-for="addr in addressStore.items"
-                :key="addr.id"
-                class="address-option"
+              <label v-for="addr in addressStore.items" :key="addr.id" class="address-option"
                 :class="{ 'is-selected': selectedAddressId === addr.id && !showNewAddressForm }"
-                @click="selectAddress(addr.id)"
-              >
-                <input
-                  type="radio"
-                  name="address"
-                  :value="addr.id"
-                  :checked="selectedAddressId === addr.id && !showNewAddressForm"
-                  class="address-radio"
-                />
+                @click="selectAddress(addr.id)">
+                <input type="radio" name="address" :value="addr.id"
+                  :checked="selectedAddressId === addr.id && !showNewAddressForm" class="address-radio" />
                 <div class="address-option-body">
                   <span class="shipping-dot"></span>
                   <div class="address-text">
@@ -174,18 +166,9 @@ const createOrder = async () => {
               </label>
 
               <!-- Add new address option -->
-              <label
-                class="address-option address-option--new"
-                :class="{ 'is-selected': showNewAddressForm }"
-                @click="selectNewAddress"
-              >
-                <input
-                  type="radio"
-                  name="address"
-                  value="new"
-                  :checked="showNewAddressForm"
-                  class="address-radio"
-                />
+              <label class="address-option address-option--new" :class="{ 'is-selected': showNewAddressForm }"
+                @click="selectNewAddress">
+                <input type="radio" name="address" value="new" :checked="showNewAddressForm" class="address-radio" />
                 <div class="address-option-body">
                   <span class="shipping-dot"></span>
                   <span class="address-new-label">+ Add new address</span>
@@ -195,10 +178,7 @@ const createOrder = async () => {
 
             <!-- New address form -->
             <div v-if="showNewAddressForm" class="new-address-form">
-              <AddressForm
-                @saved="onAddressSaved"
-                @cancel="selectedAddressId && (showNewAddressForm = false)"
-              />
+              <AddressForm @saved="onAddressSaved" @cancel="selectedAddressId && (showNewAddressForm = false)" />
             </div>
           </section>
 
@@ -206,20 +186,10 @@ const createOrder = async () => {
           <section class="section">
             <h2 class="section-title">Shipping Method</h2>
             <div class="shipping-options">
-              <label
-                v-for="option in shippingOptions"
-                :key="option.id"
-                class="shipping-option"
-                :class="{ 'is-selected': selectedShipping === option.id }"
-              >
-                <input
-                  type="radio"
-                  name="shipping"
-                  :id="option.id"
-                  :value="option.id"
-                  v-model="selectedShipping"
-                  class="shipping-radio"
-                />
+              <label v-for="option in shippingOptions" :key="option.id" class="shipping-option"
+                :class="{ 'is-selected': selectedShipping === option.id }">
+                <input type="radio" name="shipping" :id="option.id" :value="option.id" v-model="selectedShipping"
+                  class="shipping-radio" />
                 <div class="shipping-option-body">
                   <div class="shipping-option-left">
                     <span class="shipping-dot"></span>
@@ -243,17 +213,10 @@ const createOrder = async () => {
             <h2 class="section-title">Order Summary</h2>
 
             <ul class="summary-list">
-              <li
-                v-for="cartItem in cartStore.cartItems"
-                :key="cartItem.variantId"
-                class="summary-item"
-              >
+              <li v-for="cartItem in cartStore.cartItems" :key="cartItem.variantId" class="summary-item">
                 <div class="summary-item-image-wrap">
-                  <img
-                    :src="cartItem.variant.image ?? cartItem.variant.product.image ?? IMAGE"
-                    :alt="cartItem.variant.product.name"
-                    class="summary-item-image"
-                  />
+                  <img :src="cartItem.variant.image ?? cartItem.variant.product.image ?? IMAGE"
+                    :alt="cartItem.variant.product.name" class="summary-item-image" />
                   <span class="summary-item-qty">{{ cartItem.quantity }}</span>
                 </div>
                 <div class="summary-item-info">
@@ -277,10 +240,7 @@ const createOrder = async () => {
             <!-- Promo Code -->
             <div class="promo-section">
               <!-- Auto-promo banner -->
-              <div
-                v-if="promoStore.autoPromos.length > 0 && !promoStore.appliedPromo"
-                class="promo-auto-banner"
-              >
+              <div v-if="promoStore.autoPromos.length > 0 && !promoStore.appliedPromo" class="promo-auto-banner">
                 <span class="promo-auto-icon">✦</span>
                 <span>{{ promoStore.autoPromos[0]!.promo.description }} — auto-applied</span>
               </div>
@@ -296,20 +256,10 @@ const createOrder = async () => {
 
               <!-- Code input (hidden when manual code already applied) -->
               <div v-else class="promo-input-row">
-                <BaseInput
-                  v-model="promoCodeInput"
-                  placeholder="Promo code"
-                  variant="ghost"
-                  class="promo-input"
-                  @keydown.enter="applyPromo"
-                />
-                <BaseButton
-                  variant="dark"
-                  size="sm"
-                  :loading="promoStore.loading"
-                  :disabled="!promoCodeInput.trim()"
-                  @click="applyPromo"
-                >
+                <BaseInput v-model="promoCodeInput" placeholder="Promo code" variant="ghost" class="promo-input"
+                  @keydown.enter="applyPromo" />
+                <BaseButton variant="dark" size="sm" :loading="promoStore.loading" :disabled="!promoCodeInput.trim()"
+                  @click="applyPromo">
                   Apply
                 </BaseButton>
               </div>
@@ -341,7 +291,8 @@ const createOrder = async () => {
               Some items in your cart are out of stock. Please update your cart before placing an order.
             </p>
             <p v-else-if="orderStore.error" class="order-error">{{ orderStore.error }}</p>
-            <BaseButton size="lg" full-width :loading="orderStore.loading" :disabled="hasStockIssue" @click="createOrder">
+            <BaseButton size="lg" full-width :loading="orderStore.loading" :disabled="hasStockIssue"
+              @click="createOrder">
               {{ orderStore.loading ? 'Placing order…' : 'Place Order' }}
             </BaseButton>
           </section>
@@ -662,7 +613,7 @@ const createOrder = async () => {
 
 /* Promo */
 .promo-section {
-  padding-bottom: 1rem;
+  padding-block: 1rem;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 1rem;
   display: flex;
