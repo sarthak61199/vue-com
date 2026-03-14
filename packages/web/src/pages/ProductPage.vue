@@ -4,13 +4,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useWishlistStore } from '@/stores/wishlist'
 import { usePromoStore } from '@/stores/promo'
 import { useRoute, useRouter } from 'vue-router'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { api, type ApiProduct, type ApiProductVariant } from '@/services/api'
 import { IMAGE } from '@/constants'
 import { formatPrice } from '@/utils/format'
 import QuantityStepper from '@/components/QuantityStepper.vue'
 import StarRating from '@/components/StarRating.vue'
 import ProductReviews from '@/components/ProductReviews.vue'
+import ProductCard from '@/components/ProductCard.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import WishlistButton from '@/components/WishlistButton.vue'
 
@@ -21,11 +22,12 @@ const authStore = useAuthStore()
 const wishlistStore = useWishlistStore()
 const promoStore = usePromoStore()
 
-const productId = route.params.id as string
+const productId = computed(() => route.params.id as string)
 const product = ref<ApiProduct | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const quantity = ref(1)
+const recommendations = ref<ApiProduct[]>([])
 
 function slugify(str: string): string {
   return str
@@ -99,12 +101,18 @@ function isOptionSelected(typeId: string, optionId: string): boolean {
   return selectedOptions.value.get(typeId) === optionId
 }
 
-onMounted(async () => {
+async function loadProduct(id: string) {
+  loading.value = true
+  error.value = null
+  product.value = null
+  recommendations.value = []
+  quantity.value = 1
   try {
-    const fetches: Promise<unknown>[] = [api.getProductById(productId)]
+    const fetches: Promise<unknown>[] = [api.getProductById(id)]
     if (authStore.user) fetches.push(wishlistStore.fetchWishlist())
     const [p] = await Promise.all(fetches)
     product.value = p as ApiProduct
+    api.getRecommendations(id).then((items) => { recommendations.value = items }).catch(() => {})
 
     // Auto-init query params from default variant if none are set
     const prod = product.value
@@ -129,7 +137,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(() => loadProduct(productId.value))
+watch(productId, (id) => loadProduct(id))
 
 async function addToCart() {
   const variant = selectedVariant.value
@@ -138,7 +149,7 @@ async function addToCart() {
 }
 
 async function refreshProduct() {
-  product.value = await api.getProductById(productId)
+  product.value = await api.getProductById(productId.value)
 }
 </script>
 
@@ -158,7 +169,14 @@ async function refreshProduct() {
 
         <!-- Details -->
         <div class="product-details">
-          <p class="product-label">Product</p>
+          <div class="product-label-row">
+            <p class="product-label">Product</p>
+            <router-link
+              v-if="product.category"
+              :to="`/?categoryId=${product.categoryId}`"
+              class="product-category"
+            >{{ product.category.name }}</router-link>
+          </div>
           <h1 class="product-name">{{ product.name }}</h1>
           <div class="product-price-wrap">
             <span v-if="salePrice !== null" class="product-price product-price--original">{{ formatPrice(displayPrice) }}</span>
@@ -222,6 +240,13 @@ async function refreshProduct() {
           </div>
         </div>
       </div>
+
+      <section v-if="recommendations.length" class="recommendations">
+        <h2 class="recommendations-heading">You might also like</h2>
+        <div class="recommendations-grid">
+          <ProductCard v-for="rec in recommendations" :key="rec.id" :product="rec" />
+        </div>
+      </section>
 
       <ProductReviews v-if="product" :product-id="product.id" @review-submitted="refreshProduct" />
 
@@ -299,13 +324,38 @@ async function refreshProduct() {
   flex-direction: column;
 }
 
+.product-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 .product-label {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--color-mint-dark);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
+}
+
+.product-category {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+  background: var(--color-mint-50);
+  border: 1px solid var(--color-mint-100);
+  padding: 0.2em 0.6em;
+  border-radius: 100px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.product-category:hover {
+  color: var(--color-mint-dark);
+  background: var(--color-mint-100);
 }
 
 .product-name {
@@ -477,6 +527,26 @@ async function refreshProduct() {
   align-items: center;
   gap: 0.75rem;
   align-self: flex-start;
+}
+
+/* Recommendations */
+.recommendations {
+  margin-top: 4rem;
+  margin-bottom: 2rem;
+}
+
+.recommendations-heading {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+}
+
+.recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.25rem;
 }
 
 /* Not found */

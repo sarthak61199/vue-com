@@ -12,6 +12,56 @@ export interface ProductFilters {
   excludeOutOfStock?: boolean
 }
 
+type ProductRow = { id: string; price: number; [key: string]: unknown }
+
+async function enrichProducts<T extends ProductRow>(items: T[]) {
+  const productIds = items.map((p) => p.id)
+
+  const [ratings, variantRanges, defaultVariants, stockTotals] = await Promise.all([
+    prisma.review.groupBy({
+      by: ['productId'],
+      where: { productId: { in: productIds } },
+      _avg: { rating: true },
+      _count: { rating: true },
+    }),
+    prisma.productVariant.groupBy({
+      by: ['productId'],
+      where: { productId: { in: productIds } },
+      _min: { price: true },
+      _max: { price: true },
+    }),
+    prisma.productVariant.findMany({
+      where: { productId: { in: productIds }, isDefault: true },
+      select: { id: true, productId: true },
+    }),
+    prisma.productVariant.groupBy({
+      by: ['productId'],
+      where: { productId: { in: productIds } },
+      _sum: { stock: true },
+    }),
+  ])
+
+  const ratingsMap = new Map(ratings.map((r) => [r.productId, r]))
+  const rangeMap = new Map(variantRanges.map((r) => [r.productId, r]))
+  const defaultVariantMap = new Map(defaultVariants.map((v) => [v.productId, v.id]))
+  const stockMap = new Map(stockTotals.map((s) => [s.productId, s._sum.stock ?? 0]))
+
+  return items.map((p) => {
+    const r = ratingsMap.get(p.id)
+    const range = rangeMap.get(p.id)
+    return {
+      ...p,
+      averageRating: r?._avg.rating ?? null,
+      reviewCount: r?._count.rating ?? 0,
+      priceRange: range
+        ? { min: range._min.price ?? p.price, max: range._max.price ?? p.price }
+        : { min: p.price, max: p.price },
+      defaultVariantId: defaultVariantMap.get(p.id) ?? null,
+      totalStock: stockMap.get(p.id) ?? 0,
+    }
+  })
+}
+
 export async function listProducts(filters: ProductFilters) {
   const PAGE_SIZE = 9
   const page = filters.page ?? 1
@@ -54,53 +104,37 @@ export async function listProducts(filters: ProductFilters) {
     prisma.product.count({ where }),
   ])
 
-  const productIds = items.map((p) => p.id)
+  return { items: await enrichProducts(items), total }
+}
 
-  const [ratings, variantRanges, defaultVariants, stockTotals] = await Promise.all([
-    prisma.review.groupBy({
-      by: ['productId'],
-      where: { productId: { in: productIds } },
-      _avg: { rating: true },
-      _count: { rating: true },
-    }),
-    prisma.productVariant.groupBy({
-      by: ['productId'],
-      where: { productId: { in: productIds } },
-      _min: { price: true },
-      _max: { price: true },
-    }),
-    prisma.productVariant.findMany({
-      where: { productId: { in: productIds }, isDefault: true },
-      select: { id: true, productId: true },
-    }),
-    prisma.productVariant.groupBy({
-      by: ['productId'],
-      where: { productId: { in: productIds } },
-      _sum: { stock: true },
-    }),
-  ])
-
-  const ratingsMap = new Map(ratings.map((r) => [r.productId, r]))
-  const rangeMap = new Map(variantRanges.map((r) => [r.productId, r]))
-  const defaultVariantMap = new Map(defaultVariants.map((v) => [v.productId, v.id]))
-  const stockMap = new Map(stockTotals.map((s) => [s.productId, s._sum.stock ?? 0]))
-
-  const enriched = items.map((p) => {
-    const r = ratingsMap.get(p.id)
-    const range = rangeMap.get(p.id)
-    return {
-      ...p,
-      averageRating: r?._avg.rating ?? null,
-      reviewCount: r?._count.rating ?? 0,
-      priceRange: range
-        ? { min: range._min.price ?? p.price, max: range._max.price ?? p.price }
-        : { min: p.price, max: p.price },
-      defaultVariantId: defaultVariantMap.get(p.id) ?? null,
-      totalStock: stockMap.get(p.id) ?? 0,
-    }
+export async function getRecommendations(productId: string, limit = 5) {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, categoryId: true },
   })
+  if (!product) throw new ServiceError(404, 'Product not found')
 
-  return { items: enriched, total }
+  const sameCategoryItems = product.categoryId
+    ? await prisma.product.findMany({
+        where: { categoryId: product.categoryId, id: { not: productId } },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { category: true },
+      })
+    : []
+
+  const remaining = limit - sameCategoryItems.length
+  const fillerItems =
+    remaining > 0
+      ? await prisma.product.findMany({
+          where: { id: { notIn: [productId, ...sameCategoryItems.map((p) => p.id)] } },
+          take: remaining,
+          orderBy: { createdAt: 'desc' },
+          include: { category: true },
+        })
+      : []
+
+  return enrichProducts([...sameCategoryItems, ...fillerItems])
 }
 
 export async function getProductById(id: string) {

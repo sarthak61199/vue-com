@@ -225,6 +225,8 @@ export const api = {
     return request<ApiProductPage>(`/products?${params}`)
   },
   getProductById: (id: string) => request<ApiProduct>(`/products/${id}`),
+  getRecommendations: (productId: string, limit = 5) =>
+    request<ApiProduct[]>(`/products/${productId}/recommendations?limit=${limit}`),
   getCategories: () => request<ApiCategory[]>('/categories'),
 
   // Carts
