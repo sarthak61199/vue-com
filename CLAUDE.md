@@ -56,7 +56,7 @@ All API types and the `api` object live in `src/services/api.ts`. Stores call th
 - **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
 - **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `categories`, `fetchProducts(filters: ProductFilters)`, `fetchCategories()`. No auto-fetch on creation; `HomePage` drives fetching. `fetchCategories()` is idempotent (skips if already loaded).
 - **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart({ variantId, quantity })`, `updateQuantity({ variantId, quantity })`, `removeFromCart(variantId)`, `clearCart`
-- **`useOrderStore`** — exposes `createOrder(cartId, addressId?, promoCode?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
+- **`useOrderStore`** — exposes `createOrder(cartId, addressId?, promoCode?, shippingCost?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
 - **`useWishlistStore`** — no auto-init; exposes `items`, `wishlistedIds` (computed `Set<string>` for O(1) lookups), `fetchWishlist()`, `toggleWishlist(productId)`. `WishlistButton` lazy-fetches the wishlist on first click (tracked per-component via a `fetched` ref) so guest page loads incur no auth calls.
 - **`useAddressStore`** — no auto-init; exposes `items`, `loading`, `error`, `fetchAddresses()`, `createAddress(data)`, `deleteAddress(id)`. `createAddress` prepends to `items` on success; `deleteAddress` splices from `items`.
 - **`usePromoStore`** — no auto-init; exposes `appliedPromo`, `autoPromos`, `displayPromos`, `activeDiscount` (computed: manual code takes priority over best auto promo), `validateCode(code, cartId)`, `fetchAutoPromos(cartId)`, `fetchDisplayPromos()`, `getPromoForProduct(product)` (returns matching `ApiDisplayPromo` for product/category scope), `getDiscountedPrice(price, promo)`, `clearPromo()`, `reset()`. Used by `CheckoutPage` for code entry and by product display components for sale prices.
@@ -79,7 +79,7 @@ Key types in `src/services/api.ts`:
 - **`ApiProductVariant`** — `{ id, productId, price, stock, image, isDefault, values: ApiProductVariantValue[] }`
 - **`ApiCartItem`** — `{ cartId, variantId, quantity, variant: ApiProductVariant & { product: ApiProduct } }`. Access product via `cartItem.variant.product`, price via `cartItem.variant.price`.
 - **`ApiOrderItem`** — `{ orderId, variantId, quantity, price, variant: ApiProductVariant & { product: ApiProduct } }`. `price` is a snapshot taken at order creation time.
-- **`ApiOrder`** — includes `total`, `discountAmount`, `promoId`, `promo?: ApiPromo | null`, `orderItems`, `address`.
+- **`ApiOrder`** — includes `total`, `discountAmount`, `shippingCost`, `promoId`, `promo?: ApiPromo | null`, `orderItems`, `address`.
 - **`ApiPromo`** — `{ id, code: string | null, description, discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING', discountValue, scope: 'ORDER' | 'PRODUCT' | 'CATEGORY' }`
 - **`ApiPromoValidation`** — `{ promo: ApiPromo, discountAmount: number }` — returned by the validate endpoint.
 - **`ApiDisplayPromo`** — `{ id, description, discountType, discountValue, scope: 'PRODUCT' | 'CATEGORY', productId: string | null, categoryId: string | null }` — lightweight promo for showing sale prices on listings/product pages; no auth required.
@@ -191,7 +191,7 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 - `POST /api/carts`; `GET /api/carts/:id` — includes `cartItems → variant → product` and `variant → values → option`
 - `POST /api/carts/:id/items` — body `{ variantId, quantity }`, upserts (increments qty); rejects with 400 if `currentQtyInCart + quantity > variant.stock`
 - `PATCH /api/carts/:id/items/:variantId` — set quantity; rejects with 400 if `quantity > variant.stock`; `DELETE /api/carts/:id/items/:variantId`
-- `POST /api/orders` — body `{ cartId, addressId?, promoCode? }`; resolves promo before transaction, re-validates inside transaction; calculates `total = subtotal - discountAmount`; snapshots price into each `OrderItem.price`; atomically decrements stock; clears cart; returns order with `promo` included
+- `POST /api/orders` — body `{ cartId, addressId?, promoCode?, shippingCost? }`; resolves promo before transaction, re-validates inside transaction; calculates `total = subtotal - discountAmount + shippingCost`; snapshots price into each `OrderItem.price`; atomically decrements stock; clears cart; returns order with `promo` included
 - `GET /api/orders`; `GET /api/orders/:id` — includes `orderItems → variant → product`, `variant → values → option`, and `promo`
 - `GET /api/addresses`; `POST /api/addresses` — body `{ label?, line1, line2?, city, state, zip, country? }`; `DELETE /api/addresses/:id` — ownership-checked
 - `GET /api/reviews/product/:productId`; `GET /api/reviews/eligibility/:productId` — checks `orderItem.variant.productId` (purchase required); `POST /api/reviews` — body `{ productId, rating (1–5), body? }`; upserts
@@ -199,20 +199,6 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 - `POST /api/promos/validate` (requires auth) — body `{ code, cartId }`; returns `{ promo, discountAmount }` or 400 with reason
 - `GET /api/promos/auto?cartId=X` (requires auth) — returns array of `{ promo, discountAmount }` for applicable automatic promos, sorted by discount descending
 - `GET /api/promos/display` (no auth) — returns `ApiDisplayPromo[]` for active PRODUCT/CATEGORY scoped promos; used to show sale prices on product listings and product pages
-
-### Promo System
-
-Promos support two application modes:
-- **Manual codes** — user enters a code at checkout; validated via `POST /api/promos/validate` before order placement
-- **Automatic** — `isAutomatic: true`, no code; applied server-side by `getAutoPromos()` when no manual code is provided; the best one (highest discount) is selected
-
-Three discount types (`DiscountType` enum): `PERCENTAGE`, `FIXED`, `FREE_SHIPPING`. `FREE_SHIPPING` returns `discountAmount: 0` — the shipping waiver is a frontend concern. Three scopes (`PromoScope` enum): `ORDER` (entire subtotal), `PRODUCT` (items matching `productId`), `CATEGORY` (items matching `categoryId`).
-
-Promo validation happens **twice** when placing an order: once before the transaction (for early user-facing errors), and again inside the `$transaction` via `validatePromoInTransaction` (for race condition safety). `PromoUsage` is created inside the transaction after the order is created so the real `orderId` is available.
-
-Constraints checked in order: `isActive`, expiry, `minOrderAmount`, scope eligibility (matching items exist), global `maxUses`, per-user `maxUsesPerUser`.
-
-Promos are managed via seed data / direct DB — there is no admin UI.
 
 ### Database
 
@@ -230,7 +216,7 @@ SQLite does not have native enum support. Prisma enums (`PromoScope`, `DiscountT
 - `ProductVariantValue` — join table (composite PK: `[variantId, optionId]`) linking ProductVariant to VariantOption
 - `CartItem` — composite PK `[cartId, variantId]`; quantity only
 - `OrderItem` — composite PK `[orderId, variantId]`; stores `quantity` and `price` snapshot
-- `Order` — has `userId` FK, optional `addressId` FK, `total`, `discountAmount` (default 0), optional `promoId` FK
+- `Order` — has `userId` FK, optional `addressId` FK, `total`, `discountAmount` (default 0), `shippingCost` (default 0), optional `promoId` FK
 - `Promo` — `code` (unique, nullable for automatic promos), `discountType` (`DiscountType`), `discountValue`, `scope` (`PromoScope`), optional `productId`/`categoryId` for scoped promos, `minOrderAmount?`, `maxUses?`, `maxUsesPerUser?`, `expiresAt?`, `isActive`, `isAutomatic`
 - `PromoUsage` — `@@unique([promoId, orderId])`; `@@index([promoId, userId])` for per-user count queries
 - `User`, `Session` (7-day expiry), `Review` (`@@unique([userId, productId])`), `WishlistItem` (composite PK `[userId, productId]`), `Address`
