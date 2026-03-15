@@ -1,45 +1,68 @@
 import { api, type ApiCartItem } from '@/services/api'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useQuery, useMutation, useQueryCache } from '@pinia/colada'
 
 export const useCartStore = defineStore('cart', () => {
+  const queryCache = useQueryCache()
   const cartId = ref<string | null>(localStorage.getItem('cartId'))
-  const cartItems = ref<ApiCartItem[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
 
-  const initCart = async () => {
-    loading.value = true
-    error.value = null
-    try {
-      if (!cartId.value) {
-        const cart = await api.createCart()
-        cartId.value = cart.id
-        localStorage.setItem('cartId', cart.id)
-      } else {
-        const cart = await api.getCart(cartId.value)
-        cartItems.value = cart.cartItems
-      }
-    } catch (e) {
-      error.value = (e as Error).message
-    } finally {
-      loading.value = false
+  const cartQueryKey = computed(() => ['cart', cartId.value!] as const)
+
+  const { data: cartData } = useQuery({
+    key: cartQueryKey,
+    query: () => api.getCart(cartId.value!),
+    enabled: computed(() => !!cartId.value),
+  })
+
+  const cartItems = computed<ApiCartItem[]>(() => cartData.value?.cartItems ?? [])
+
+  // Create cart mutation — used when no cartId exists
+  const { mutateAsync: createCartMutate } = useMutation({
+    mutation: () => api.createCart(),
+    onSuccess: (cart) => {
+      cartId.value = cart.id
+      localStorage.setItem('cartId', cart.id)
+    },
+  })
+
+  // Ensure cart exists before cart operations
+  const ensureCart = async () => {
+    if (!cartId.value) {
+      await createCartMutate()
     }
   }
 
+  const { mutateAsync: addToCartMutate } = useMutation({
+    mutation: async ({ variantId, quantity }: { variantId: string; quantity: number }) => {
+      await ensureCart()
+      return api.addCartItem(cartId.value!, variantId, quantity)
+    },
+    onSuccess: () => {
+      if (cartId.value) queryCache.invalidateQueries({ key: ['cart', cartId.value] })
+    },
+  })
+
+  const { mutateAsync: updateQuantityMutate } = useMutation({
+    mutation: ({ variantId, quantity }: { variantId: string; quantity: number }) =>
+      api.updateCartItem(cartId.value!, variantId, quantity),
+    onSuccess: () => {
+      if (cartId.value) queryCache.invalidateQueries({ key: ['cart', cartId.value] })
+    },
+  })
+
+  const { mutateAsync: removeFromCartMutate } = useMutation({
+    mutation: (variantId: string) => api.removeCartItem(cartId.value!, variantId),
+    onSuccess: () => {
+      if (cartId.value) queryCache.invalidateQueries({ key: ['cart', cartId.value] })
+    },
+  })
+
   const addToCart = async ({ variantId, quantity }: { variantId: string; quantity: number }) => {
-    if (!cartId.value) return
-    error.value = null
     try {
-      const item = await api.addCartItem(cartId.value, variantId, quantity)
-      const existing = cartItems.value.find((i) => i.variantId === variantId)
-      if (existing) {
-        existing.quantity = item.quantity
-      } else {
-        cartItems.value.push(item)
-      }
-    } catch (e) {
-      error.value = (e as Error).message
+      await addToCartMutate({ variantId, quantity })
+    } catch {
+      // error state available via mutation
     }
   }
 
@@ -54,41 +77,33 @@ export const useCartStore = defineStore('cart', () => {
     if (quantity < 1) {
       return removeFromCart(variantId)
     }
-    error.value = null
     try {
-      const item = await api.updateCartItem(cartId.value, variantId, quantity)
-      const existing = cartItems.value.find((i) => i.variantId === variantId)
-      if (existing) existing.quantity = item.quantity
-    } catch (e) {
-      error.value = (e as Error).message
+      await updateQuantityMutate({ variantId, quantity })
+    } catch {
+      // error state available via mutation
     }
   }
 
   const removeFromCart = async (variantId: string) => {
     if (!cartId.value) return
-    error.value = null
     try {
-      await api.removeCartItem(cartId.value, variantId)
-      cartItems.value = cartItems.value.filter((i) => i.variantId !== variantId)
-    } catch (e) {
-      error.value = (e as Error).message
+      await removeFromCartMutate(variantId)
+    } catch {
+      // error state available via mutation
     }
   }
 
-  // Called after order is placed — server already cleared items
   const clearCart = () => {
-    cartItems.value = []
+    if (cartId.value) {
+      queryCache.setQueryData(['cart', cartId.value], (old) =>
+        old ? { ...old, cartItems: [] } : old,
+      )
+    }
   }
-
-  // Auto-init on store creation
-  initCart()
 
   return {
     cartId,
     cartItems,
-    loading,
-    error,
-    initCart,
     addToCart,
     updateQuantity,
     removeFromCart,

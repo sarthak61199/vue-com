@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAddressStore } from '@/stores/address'
+import { useCreateAddress } from '@/queries/useAddresses'
 import type { ApiAddress } from '@/services/api'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
@@ -10,11 +10,10 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const addressStore = useAddressStore()
+const { mutateAsync: createAddress, isLoading: loading } = useCreateAddress()
 
 const fields = ref({ label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' })
 const error = ref('')
-const loading = ref(false)
 
 const submit = async () => {
   error.value = ''
@@ -22,22 +21,20 @@ const submit = async () => {
     error.value = 'Street address, city, state and ZIP are required.'
     return
   }
-  loading.value = true
-  const result = await addressStore.createAddress({
-    label: fields.value.label || null,
-    line1: fields.value.line1,
-    line2: fields.value.line2 || null,
-    city: fields.value.city,
-    state: fields.value.state,
-    zip: fields.value.zip,
-    country: fields.value.country || 'US',
-  })
-  loading.value = false
-  if (result) {
+  try {
+    const result = await createAddress({
+      label: fields.value.label || null,
+      line1: fields.value.line1,
+      line2: fields.value.line2 || null,
+      city: fields.value.city,
+      state: fields.value.state,
+      zip: fields.value.zip,
+      country: fields.value.country || 'US',
+    })
     fields.value = { label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' }
     emit('saved', result)
-  } else {
-    error.value = addressStore.error ?? 'Failed to save address.'
+  } catch (e) {
+    error.value = (e as Error).message
   }
 }
 </script>

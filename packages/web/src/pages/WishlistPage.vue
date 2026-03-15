@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useWishlistStore } from '@/stores/wishlist'
+import { computed } from 'vue'
+import { useQuery } from '@pinia/colada'
 import { useCartStore } from '@/stores/cart'
+import { wishlistQuery, useToggleWishlist } from '@/queries/useWishlist'
 import EmptyState from '@/components/EmptyState.vue'
 import { IMAGE } from '@/constants'
 import { formatPrice } from '@/utils/format'
 
-const wishlistStore = useWishlistStore()
 const cartStore = useCartStore()
 
-onMounted(async () => {
-  await wishlistStore.fetchWishlist()
-})
+const { data: wishlistItems, isPending: loading } = useQuery(wishlistQuery)
+const items = computed(() => wishlistItems.value ?? [])
+
+const { mutateAsync: toggleMutate } = useToggleWishlist()
 </script>
 
 <template>
@@ -22,10 +23,10 @@ onMounted(async () => {
         <h1 class="page-title">My Wishlist</h1>
       </div>
 
-      <div v-if="wishlistStore.loading" class="loading-msg">Loading wishlist...</div>
+      <div v-if="loading" class="loading-msg">Loading wishlist...</div>
 
       <EmptyState
-        v-else-if="wishlistStore.items.length === 0"
+        v-else-if="items.length === 0"
         heading="Your wishlist is empty"
         message="Save products you love and add them to your cart later."
         link-to="/"
@@ -33,7 +34,7 @@ onMounted(async () => {
       />
 
       <ul v-else class="wishlist-list">
-        <li v-for="item in wishlistStore.items" :key="item.productId" class="wishlist-item">
+        <li v-for="item in items" :key="item.productId" class="wishlist-item">
           <router-link :to="`/product/${item.productId}`" class="item-thumb-wrap">
             <img :src="item.product.image || IMAGE" :alt="item.product.name" class="item-thumb" />
           </router-link>
@@ -54,7 +55,7 @@ onMounted(async () => {
             >
               Add to Cart
             </button>
-            <button class="btn-remove" @click="wishlistStore.removeFromWishlist(item.productId)">
+            <button class="btn-remove" @click="toggleMutate({ productId: item.productId, isWishlisted: true })">
               Remove
             </button>
           </div>

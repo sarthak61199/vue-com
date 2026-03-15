@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useProductStore } from '@/stores/product'
-import { usePromoStore } from '@/stores/promo'
+import { useQuery } from '@pinia/colada'
 import { useDebounce } from '@/composables/useDebounce'
+import { categoriesQuery } from '@/queries/useCategories'
+import { displayPromosQuery } from '@/queries/useDisplayPromos'
+import { productsQuery } from '@/queries/useProducts'
+import type { ProductFilters } from '@/services/api'
 import ProductCard from '@/components/ProductCard.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -14,8 +17,12 @@ import FilterPanel from '@/components/FilterPanel.vue'
 const PAGE_SIZE = 9
 const route = useRoute()
 const router = useRouter()
-const productStore = useProductStore()
-const promoStore = usePromoStore()
+
+// --- Queries ---
+const { data: categoriesData } = useQuery(categoriesQuery)
+useQuery(displayPromosQuery)
+
+const categories = computed(() => categoriesData.value ?? [])
 
 // --- URL-derived state ---
 const currentPage = computed(() => {
@@ -86,30 +93,23 @@ const clearSearch = () => {
   router.push({ query: { ...route.query, search: undefined, page: 1 } })
 }
 
-// --- Fetch products on any filter/page change ---
-watch(
-  [
-    currentPage,
-    currentSearch,
-    currentCategoryId,
-    currentMinPrice,
-    currentMaxPrice,
-    currentMinRating,
-    currentExcludeOutOfStock,
-  ],
-  ([page, search, categoryId, minPrice, maxPrice, minRating, excludeOutOfStock]) => {
-    productStore.fetchProducts({
-      page,
-      search: search || undefined,
-      categoryId: categoryId || undefined,
-      minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
-      maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
-      minRating: minRating ? parseFloat(minRating as string) : undefined,
-      excludeOutOfStock: excludeOutOfStock || undefined,
-    })
-  },
-  { immediate: true },
+// --- Products query (auto-refetches when filters change) ---
+const filters = computed<ProductFilters>(() => ({
+  page: currentPage.value,
+  search: currentSearch.value || undefined,
+  categoryId: currentCategoryId.value || undefined,
+  minPrice: currentMinPrice.value ? parseFloat(currentMinPrice.value) : undefined,
+  maxPrice: currentMaxPrice.value ? parseFloat(currentMaxPrice.value) : undefined,
+  minRating: currentMinRating.value ? parseFloat(currentMinRating.value) : undefined,
+  excludeOutOfStock: currentExcludeOutOfStock.value || undefined,
+}))
+
+const { data: productsData, isPending: productsLoading, error: productsError } = useQuery(
+  () => productsQuery(filters.value),
 )
+
+const products = computed(() => productsData.value?.items ?? [])
+const total = computed(() => productsData.value?.total ?? 0)
 
 const goTo = (page: number) => router.push({ query: { ...route.query, page } })
 
@@ -121,11 +121,6 @@ const hasActiveFilters = computed(
     currentMinRating.value ||
     currentExcludeOutOfStock.value,
 )
-
-onMounted(() => {
-  productStore.fetchCategories()
-  promoStore.fetchDisplayPromos()
-})
 </script>
 
 <template>
@@ -137,9 +132,9 @@ onMounted(() => {
         <h1 class="page-title">Fresh Picks</h1>
         <p class="page-subtitle">
           <template v-if="currentSearch">
-            {{ productStore.total }} results for "{{ currentSearch }}"
+            {{ total }} results for "{{ currentSearch }}"
           </template>
-          <template v-else>{{ productStore.total }} products available</template>
+          <template v-else>{{ total }} products available</template>
         </p>
       </div>
 
@@ -159,7 +154,7 @@ onMounted(() => {
       <!-- Content layout: sidebar + grid -->
       <div class="content-layout">
         <FilterPanel
-          :categories="productStore.categories"
+          :categories="categories"
           :category-id="currentCategoryId"
           :min-price="localMinPrice"
           :max-price="localMaxPrice"
@@ -182,7 +177,7 @@ onMounted(() => {
           <div v-if="hasActiveFilters" class="active-filters">
             <span class="active-label">Filtered by:</span>
             <button v-if="currentCategoryId" class="filter-pill" @click="setCategory('')">
-              {{ productStore.categories.find((c) => c.id === currentCategoryId)?.name }}
+              {{ categories.find((c) => c.id === currentCategoryId)?.name }}
               <span class="pill-x">×</span>
             </button>
             <button
@@ -208,12 +203,12 @@ onMounted(() => {
             </button>
           </div>
 
-          <p v-if="productStore.loading" class="status-text">Loading...</p>
-          <p v-else-if="productStore.error" class="status-text">{{ productStore.error }}</p>
+          <p v-if="productsLoading" class="status-text">Loading...</p>
+          <p v-else-if="productsError" class="status-text">{{ productsError.message }}</p>
 
           <template v-else>
             <EmptyState
-              v-if="productStore.products.length === 0"
+              v-if="products.length === 0"
               :heading="
                 currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'
               "
@@ -224,14 +219,14 @@ onMounted(() => {
 
             <template v-else>
               <ul class="product-grid">
-                <li v-for="product in productStore.products" :key="product.id">
+                <li v-for="product in products" :key="product.id">
                   <ProductCard :product="product" />
                 </li>
               </ul>
 
               <PaginationControls
                 :page="currentPage"
-                :total="productStore.total"
+                :total="total"
                 :page-size="PAGE_SIZE"
                 @prev="goTo(currentPage - 1)"
                 @next="goTo(currentPage + 1)"

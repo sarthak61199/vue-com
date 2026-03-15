@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useWishlistStore } from '@/stores/wishlist'
+import { useQuery } from '@pinia/colada'
+import { wishlistQuery, useToggleWishlist } from '@/queries/useWishlist'
 
 const props = defineProps<{ productId: string }>()
 
 const authStore = useAuthStore()
-const wishlistStore = useWishlistStore()
 const router = useRouter()
 const route = useRoute()
 
-const fetched = ref(false)
+const { data: wishlistItems } = useQuery({
+  ...wishlistQuery,
+  enabled: computed(() => !!authStore.user),
+})
+
+const wishlistedIds = computed(
+  () => new Set((wishlistItems.value ?? []).map((i) => i.productId)),
+)
+
+const { mutateAsync: toggleMutate } = useToggleWishlist()
 
 async function handleClick(e: Event) {
   e.preventDefault()
@@ -22,23 +31,18 @@ async function handleClick(e: Event) {
     return
   }
 
-  if (!fetched.value) {
-    await wishlistStore.fetchWishlist()
-    fetched.value = true
-  }
-
-  await wishlistStore.toggleWishlist(props.productId)
+  await toggleMutate({ productId: props.productId, isWishlisted: wishlistedIds.value.has(props.productId) })
 }
 </script>
 
 <template>
   <button
     class="wishlist-btn"
-    :class="{ wishlisted: wishlistStore.wishlistedIds.has(productId) }"
-    :title="wishlistStore.wishlistedIds.has(productId) ? 'Remove from wishlist' : 'Add to wishlist'"
+    :class="{ wishlisted: wishlistedIds.has(productId) }"
+    :title="wishlistedIds.has(productId) ? 'Remove from wishlist' : 'Add to wishlist'"
     @click="handleClick"
   >
-    {{ wishlistStore.wishlistedIds.has(productId) ? '♥' : '♡' }}
+    {{ wishlistedIds.has(productId) ? '♥' : '♡' }}
   </button>
 </template>
 

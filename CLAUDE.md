@@ -51,21 +51,34 @@ Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnl
 
 ### Data layer (web)
 
-All API types and the `api` object live in `src/services/api.ts`. Stores call the server API directly:
+All API types and the `api` object live in `src/services/api.ts`.
 
-- **`useAuthStore`** — restores session on creation via `fetchMe()` (exposes `initPromise`); exposes `user`, `login`, `logout`, `register`
-- **`useProductStore`** — exposes `products`, `total`, `loading`, `error`, `categories`, `fetchProducts(filters: ProductFilters)`, `fetchCategories()`. No auto-fetch on creation; `HomePage` drives fetching. `fetchCategories()` is idempotent (skips if already loaded).
-- **`useCartStore`** — persists `cartId` in `localStorage`; auto-inits on creation (creates or hydrates cart); exposes `cartItems`, `addToCart({ variantId, quantity })`, `updateQuantity({ variantId, quantity })`, `removeFromCart(variantId)`, `clearCart`
-- **`useOrderStore`** — exposes `createOrder(cartId, addressId?, promoCode?, shippingCost?)`, `getOrderById(id)`, `getOrders()`. `getOrderById` caches in `currentOrder`; skips the fetch if `currentOrder.id` already matches.
-- **`useWishlistStore`** — no auto-init; exposes `items`, `wishlistedIds` (computed `Set<string>` for O(1) lookups), `fetchWishlist()`, `toggleWishlist(productId)`. `WishlistButton` lazy-fetches the wishlist on first click (tracked per-component via a `fetched` ref) so guest page loads incur no auth calls.
-- **`useAddressStore`** — no auto-init; exposes `items`, `loading`, `error`, `fetchAddresses()`, `createAddress(data)`, `deleteAddress(id)`. `createAddress` prepends to `items` on success; `deleteAddress` splices from `items`.
-- **`usePromoStore`** — no auto-init; exposes `appliedPromo`, `autoPromos`, `displayPromos`, `activeDiscount` (computed: manual code takes priority over best auto promo), `validateCode(code, cartId)`, `fetchAutoPromos(cartId)`, `fetchDisplayPromos()`, `getPromoForProduct(product)` (returns matching `ApiDisplayPromo` for product/category scope), `getDiscountedPrice(price, promo)`, `clearPromo()`, `reset()`. Used by `CheckoutPage` for code entry and by product display components for sale prices.
+**Data fetching uses [Pinia Colada](https://github.com/posva/pinia-colada)** (registered in `main.ts` with global `staleTime: 30s`, `gcTime: 5min`, `refetchOnWindowFocus: true`). Query option factories and mutations live in `src/queries/`:
 
-`ProfilePage` (`/profile/:tab`) is the user hub with four tabs: **info** (read-only email + join date), **password** (change password form using `api.changePassword()`), **orders** (order list, lazy-fetched only when the tab is first visited via `watch` on `route.params.tab`), and **addresses** (saved delivery addresses, also lazy-fetched on first visit).
+- **`useProducts.ts`** — `productsQuery(filters)` factory; key `['products', 'list', filters]`
+- **`useProduct.ts`** — `productQuery(id)` factory; key `['products', id]`
+- **`useCategories.ts`** — `categoriesQuery`; staleTime 5 min
+- **`useRecommendations.ts`** — `recommendationsQuery(productId)`; key `['products', id, 'recommendations']`; staleTime 1 min
+- **`useDisplayPromos.ts`** — `displayPromosQuery`; key `['promos', 'display']`; staleTime 1 min. Used by `ProductCard` and `ProductPage` to show sale prices; no auth required.
+- **`useWishlist.ts`** — `wishlistQuery` + `useToggleWishlist` mutation. Toggle uses `onSettled` to invalidate (reverts to server state on error).
+- **`useAddresses.ts`** — `addressesQuery` + `useCreateAddress` (optimistic `setQueryData` prepend) + `useDeleteAddress` (optimistic filter).
+- **`useOrders.ts`** — `ordersQuery`, `orderQuery(id)` + `useCreateOrder` mutation; invalidates `QUERY_KEYS.orders` (`['orders']`) on success, which hierarchically covers `['orders', id]` too.
+- **`useReviews.ts`** — `productReviewsQuery(id)`, `reviewEligibilityQuery(id)`, `useSubmitReview` mutation; on success invalidates reviews, eligibility, and the product query (to refresh rating).
+- **`keys.ts`** — exports `QUERY_KEYS = { orders: ['orders'] }` for bulk invalidation.
+
+**Pinia stores** (`src/stores/`) handle state that doesn't fit the query model:
+
+- **`useAuthStore`** — uses `useQuery` for session hydration (`['auth', 'me']`); exposes `initPromise` (resolves when first auth query settles — route guards await this before redirecting); exposes `user`, `login`, `logout`, `register` via mutations. `logout` invalidates wishlist, orders, and addresses queries.
+- **`useCartStore`** — persists `cartId` in `localStorage`; uses `useQuery` to hydrate cart data (disabled when no `cartId`); `ensureCart()` creates a cart on first add. Exposes `cartItems`, `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart` (optimistic `setQueryData`).
+- **`usePromoStore`** — hybrid: `useQuery` for auto-promos (enabled by setting `autoPromosCartId`), `useMutation` for code validation. Exposes `appliedPromo`, `autoPromos`, `activeDiscount` (manual code takes priority over best auto promo), `loading` (from mutation `isLoading`), `error` (manual ref — must be clearable independently), `validateCode(code, cartId)`, `fetchAutoPromos(cartId)`, `clearPromo()`, `reset()`.
+
+`ProfilePage` (`/profile/:tab`) is the user hub with four tabs: **info** (read-only email + join date), **password** (change password form using `api.changePassword()`), **orders** (query enabled only when `tab === 'orders'`), and **addresses** (query enabled only when `tab === 'addresses'`).
 
 `src/constants.ts` exports `IMAGE` — a placeholder image URL used across product displays.
 
-`src/utils/format.ts` exports two helpers used throughout the app: `formatPrice(amount: number)` (formats as `$X.XX`) and `getVariantLabel(variant)` (joins option values with ` / `).
+`src/utils/format.ts` — `formatPrice(amount: number)` (formats as `$X.XX`) and `getVariantLabel(variant)` (joins option values with ` / `).
+
+`src/utils/promo.ts` — `getPromoForProduct(displayPromos, product)` and `getDiscountedPrice(price, promo)` pure helpers. Used by `ProductCard` and `ProductPage` to compute sale prices from `displayPromosQuery` data.
 
 Font: **Titillium Web** (400 & 700 weights) via `@fontsource/titillium-web` in `App.vue`.
 
@@ -109,16 +122,16 @@ Feature components:
 - **`EmptyState.vue`** — props: `heading`, `message`, `linkTo`, `linkText`.
 - **`QuantityStepper.vue`** — props: `quantity`, `disableMinus?`, `disablePlus?`; emits `change` with new quantity. Purely presentational — all disable logic is computed by the parent.
 - **`StarRating.vue`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`.
-- **`ProductReviews.vue`** — props: `productId`; emits `reviewSubmitted`. Fetches reviews and eligibility on mount. Review submission re-fetches both reviews and parent product (via emitted event handled in ProductPage).
+- **`ProductReviews.vue`** — props: `productId`. Uses `productReviewsQuery` and `reviewEligibilityQuery` (eligibility only enabled when authenticated). `useSubmitReview` mutation invalidates reviews, eligibility, and product on success.
 - **`ReviewForm.vue`** — extracted form used inside `ProductReviews.vue`.
-- **`WishlistButton.vue`** — props: `productId`; self-contained heart toggle. Always calls `preventDefault` + `stopPropagation` (safe to nest inside `<router-link>`). Redirects guests to `/login?redirectTo=<current path>`.
-- **`AddressForm.vue`** — self-contained address creation form; calls `useAddressStore.createAddress()` internally; emits `saved(ApiAddress)` and `cancel`. Used in CheckoutPage and ProfilePage.
+- **`WishlistButton.vue`** — props: `productId`; self-contained heart toggle. Calls `useQuery(wishlistQuery)` (disabled for guests). Always calls `preventDefault` + `stopPropagation` (safe to nest inside `<router-link>`). Redirects guests to `/login?redirectTo=<current path>`.
+- **`AddressForm.vue`** — self-contained address creation form; calls `useCreateAddress` mutation internally; emits `saved(ApiAddress)` and `cancel`. Used in CheckoutPage and ProfilePage.
 - **`FilterPanel.vue`** — sidebar filter UI; props: `categories`, `categoryId`, `minPrice`, `maxPrice`, `minRating`, `excludeOutOfStock`; emits `category-change`, `price-change`, `rating-change`, `stock-change`, `clear`.
 - **`ProductCard.vue`** — shows "From $X.XX" when `product.priceRange.min !== product.priceRange.max`, otherwise flat price.
 
 ### Pagination, Search & Filtering
 
-`GET /api/products` supports `?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N&excludeOutOfStock=true` — returns `{ items: ApiProduct[], total: number }` (9/page, `createdAt asc`). `HomePage` reads all filter params from URL query and passes them to `fetchProducts(filters)`. Search and price inputs are debounced (300ms) via `src/composables/useDebounce.ts` before pushing to URL. Category, rating, and stock-toggle changes are immediate. `PaginationControls.vue` is presentational (props: `page`, `total`, `pageSize`; emits `prev`/`next`). `ProductPage` fetches its product directly via `api.getProductById(id)` (not from the store).
+`GET /api/products` supports `?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N&excludeOutOfStock=true` — returns `{ items: ApiProduct[], total: number }` (9/page, `createdAt asc`). `HomePage` reads all filter params from the URL query, builds a `filters` computed, and passes it to `useQuery(() => productsQuery(filters.value))` — Pinia Colada re-fetches automatically when the key changes. Search and price inputs are debounced (300ms) via `src/composables/useDebounce.ts` before pushing to the URL; category, rating, and stock-toggle changes are immediate. `PaginationControls.vue` is presentational (props: `page`, `total`, `pageSize`; emits `prev`/`next`). `ProductPage` fetches via `useQuery(() => productQuery(productId.value))` — the reactive key handles navigation between products without remounting. ProductPage also prefetches `displayPromosQuery` and (for authenticated users) `wishlistQuery` to warm the cache for child components. Recommendations use `recommendationsQuery(productId)` and render non-blocking below the product.
 
 ### Linting & Formatting
 
@@ -153,7 +166,7 @@ One service file per domain:
 - `cart.service.ts` — create/get cart, add/update/remove items with stock validation
 - `category.service.ts` — getAllCategories
 - `order.service.ts` — createOrder (atomic stock decrement transaction), getOrderById (ownership check), getUserOrders
-- `product.service.ts` — listProducts (filter/enrichment pipeline), getProductById
+- `product.service.ts` — listProducts (filter/enrichment pipeline), getProductById, getRecommendations (same-category first, fills remainder from other categories). Shared `enrichProducts()` helper adds `averageRating`, `reviewCount`, `priceRange`, `defaultVariantId`, `totalStock` to any product array.
 - `promo.service.ts` — validatePromoCode, getAutoPromos, validatePromoInTransaction
 - `review.service.ts` — getProductReviews, getReviewEligibility, upsertReview (returns `{ review, isNew }` to distinguish 201/200)
 - `wishlist.service.ts` — get/add/remove with `.map()` transform to inject `defaultVariantId`
@@ -186,7 +199,7 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 ### API Routes
 
 - `POST /api/auth/register` — create user; `POST /api/auth/login` — start session; `POST /api/auth/logout`; `GET /api/auth/me` (requires auth); `PATCH /api/auth/password` (requires auth, body `{ currentPassword, newPassword }`)
-- `GET /api/products?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N&excludeOutOfStock=true` — returns `{ items, total }` with `priceRange`, `defaultVariantId`, `averageRating`, `reviewCount`, `totalStock` per product; `GET /api/products/:id` — includes full `variantTypes` (with nested `options`) and `variants` (with nested `values.option`; each variant includes `stock`)
+- `GET /api/products?page=N&search=query&categoryId=X&minPrice=N&maxPrice=N&minRating=N&excludeOutOfStock=true` — returns `{ items, total }` with `priceRange`, `defaultVariantId`, `averageRating`, `reviewCount`, `totalStock` per product; `GET /api/products/:id` — includes full `variantTypes` (with nested `options`) and `variants` (with nested `values.option`; each variant includes `stock`); `GET /api/products/:id/recommendations?limit=N` — returns up to N (max 10, default 5) enriched `ApiProduct[]`, same-category first
 - `GET /api/categories`
 - `POST /api/carts`; `GET /api/carts/:id` — includes `cartItems → variant → product` and `variant → values → option`
 - `POST /api/carts/:id/items` — body `{ variantId, quantity }`, upserts (increments qty); rejects with 400 if `currentQtyInCart + quantity > variant.stock`

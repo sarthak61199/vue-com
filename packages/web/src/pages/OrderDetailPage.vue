@@ -1,16 +1,17 @@
 <script lang="ts" setup>
-import { useOrderStore } from '@/stores/order'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { onMounted } from 'vue'
+import { useQuery } from '@pinia/colada'
+import { orderQuery } from '@/queries/useOrders'
 import { IMAGE } from '@/constants'
 import { formatPrice, getVariantLabel } from '@/utils/format'
 
 const route = useRoute()
-const orderStore = useOrderStore()
+const orderId = computed(() => route.params.id as string)
 
-onMounted(async () => {
-  await orderStore.getOrderById(route.params.id as string)
-})
+const { data: order, isPending: loading, error } = useQuery(
+  () => orderQuery(orderId.value),
+)
 </script>
 
 <template>
@@ -18,19 +19,19 @@ onMounted(async () => {
     <div class="page-inner">
       <router-link to="/profile/orders" class="back-link">← My Orders</router-link>
 
-      <div v-if="orderStore.loading" class="status-msg">Loading order...</div>
-      <div v-else-if="orderStore.error" class="status-msg error-msg">{{ orderStore.error }}</div>
+      <div v-if="loading" class="status-msg">Loading order...</div>
+      <div v-else-if="error" class="status-msg error-msg">{{ error.message }}</div>
 
-      <template v-else-if="orderStore.currentOrder">
+      <template v-else-if="order">
         <div class="page-header">
           <p class="page-label">Order Details</p>
           <h1 class="page-title">
-            Order #{{ orderStore.currentOrder.id.slice(0, 8).toUpperCase() }}
+            Order #{{ order.id.slice(0, 8).toUpperCase() }}
           </h1>
           <p class="page-date">
             Placed on
             {{
-              new Date(orderStore.currentOrder.createdAt).toLocaleDateString('en-US', {
+              new Date(order.createdAt).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -41,7 +42,7 @@ onMounted(async () => {
 
         <div class="order-card">
           <ul class="items-list">
-            <li v-for="item in orderStore.currentOrder.orderItems" :key="item.variantId" class="item-row">
+            <li v-for="item in order.orderItems" :key="item.variantId" class="item-row">
               <div class="item-image-wrap">
                 <img :src="item.variant.image ?? item.variant.product.image ?? IMAGE" :alt="item.variant.product.name"
                   class="item-image" />
@@ -58,49 +59,49 @@ onMounted(async () => {
             </li>
           </ul>
 
-          <div class="order-footer" :class="{ 'footer-no-address': !orderStore.currentOrder.address }">
-            <div v-if="orderStore.currentOrder.address" class="delivery-info">
+          <div class="order-footer" :class="{ 'footer-no-address': !order.address }">
+            <div v-if="order.address" class="delivery-info">
               <span class="footer-label">Delivered to</span>
-              <p v-if="orderStore.currentOrder.address.label" class="delivery-name">
-                {{ orderStore.currentOrder.address.label }}
+              <p v-if="order.address.label" class="delivery-name">
+                {{ order.address.label }}
               </p>
-              <p class="delivery-text">{{ orderStore.currentOrder.address.line1 }}</p>
-              <p v-if="orderStore.currentOrder.address.line2" class="delivery-text">
-                {{ orderStore.currentOrder.address.line2 }}
+              <p class="delivery-text">{{ order.address.line1 }}</p>
+              <p v-if="order.address.line2" class="delivery-text">
+                {{ order.address.line2 }}
               </p>
               <p class="delivery-text">
-                {{ orderStore.currentOrder.address.city }},
-                {{ orderStore.currentOrder.address.state }}
-                {{ orderStore.currentOrder.address.zip }}
+                {{ order.address.city }},
+                {{ order.address.state }}
+                {{ order.address.zip }}
               </p>
-              <p class="delivery-text">{{ orderStore.currentOrder.address.country }}</p>
+              <p class="delivery-text">{{ order.address.country }}</p>
             </div>
 
             <div class="order-total">
-              <template v-if="orderStore.currentOrder.discountAmount > 0 || orderStore.currentOrder.shippingCost > 0">
+              <template v-if="order.discountAmount > 0 || order.shippingCost > 0">
                 <span class="footer-label">Subtotal</span>
                 <span class="subtotal-value">
-                  {{ formatPrice(orderStore.currentOrder.orderItems.reduce((s, i) => s + i.price * i.quantity, 0)) }}
+                  {{ formatPrice(order.orderItems.reduce((s, i) => s + i.price * i.quantity, 0)) }}
                 </span>
-                <template v-if="orderStore.currentOrder.discountAmount > 0">
+                <template v-if="order.discountAmount > 0">
                   <span class="discount-label">
                     Discount
-                    <span v-if="orderStore.currentOrder.promo" class="discount-code">
-                      {{ orderStore.currentOrder.promo.code ?? orderStore.currentOrder.promo.description }}
+                    <span v-if="order.promo" class="discount-code">
+                      {{ order.promo.code ?? order.promo.description }}
                     </span>
                   </span>
-                  <span class="discount-value">−{{ formatPrice(orderStore.currentOrder.discountAmount) }}</span>
+                  <span class="discount-value">−{{ formatPrice(order.discountAmount) }}</span>
                 </template>
-                <template v-if="orderStore.currentOrder.shippingCost > 0">
+                <template v-if="order.shippingCost > 0">
                   <span class="footer-label">Shipping</span>
-                  <span class="subtotal-value">{{ formatPrice(orderStore.currentOrder.shippingCost) }}</span>
+                  <span class="subtotal-value">{{ formatPrice(order.shippingCost) }}</span>
                 </template>
                 <span class="footer-label footer-label--total">Total</span>
               </template>
               <template v-else>
                 <span class="footer-label">Total</span>
               </template>
-              <span class="total-value">{{ formatPrice(orderStore.currentOrder.total) }}</span>
+              <span class="total-value">{{ formatPrice(order.total) }}</span>
             </div>
           </div>
         </div>

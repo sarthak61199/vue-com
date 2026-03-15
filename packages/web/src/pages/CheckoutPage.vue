@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
-import { useOrderStore } from '@/stores/order'
-import { useAddressStore } from '@/stores/address'
 import { usePromoStore } from '@/stores/promo'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useQuery } from '@pinia/colada'
+import { addressesQuery, useDeleteAddress } from '@/queries/useAddresses'
+import { useCreateOrder } from '@/queries/useOrders'
 import type { ApiAddress } from '@/services/api'
 import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
@@ -12,27 +13,25 @@ import BaseButton from '@/components/BaseButton.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import AddressForm from '@/components/AddressForm.vue'
 
-const orderStore = useOrderStore()
 const cartStore = useCartStore()
-const addressStore = useAddressStore()
 const promoStore = usePromoStore()
 const router = useRouter()
 
-onMounted(async () => {
-  if (cartStore.cartItems.length === 0) {
-    router.push('/')
-    return
-  }
-  await addressStore.fetchAddresses()
-  if (addressStore.items.length > 0) {
-    selectedAddressId.value = addressStore.items[0]!.id
-  } else {
-    showNewAddressForm.value = true
-  }
-  if (cartStore.cartId) {
-    await promoStore.fetchAutoPromos(cartStore.cartId)
-  }
-})
+// --- Addresses ---
+const { data: addressesData, isPending: addressesLoading } = useQuery(addressesQuery)
+const addresses = computed(() => addressesData.value ?? [])
+
+// --- Order creation ---
+const { mutateAsync: createOrderMutate, isLoading: orderLoading, error: orderError } = useCreateOrder()
+
+if (cartStore.cartItems.length === 0) {
+  router.push('/')
+}
+
+// Fetch auto promos once we have a cartId
+if (cartStore.cartId) {
+  promoStore.fetchAutoPromos(cartStore.cartId)
+}
 
 // --- Shipping ---
 const selectedShipping = ref('standard')
@@ -73,14 +72,14 @@ const onAddressSaved = (address: ApiAddress) => {
 }
 
 // auto-select first when addresses load
-watch(
-  () => addressStore.items,
-  (items) => {
-    if (items.length > 0 && selectedAddressId.value === null && !showNewAddressForm.value) {
-      selectedAddressId.value = items[0]!.id
-    }
-  },
-)
+watch(addresses, (items) => {
+  if (items.length > 0 && selectedAddressId.value === null && !showNewAddressForm.value) {
+    selectedAddressId.value = items[0]!.id
+  }
+  if (items.length === 0 && !showNewAddressForm.value) {
+    showNewAddressForm.value = true
+  }
+}, { immediate: true })
 
 // --- Promo ---
 const promoCodeInput = ref('')
@@ -115,17 +114,19 @@ const orderTotal = computed(
 
 const createOrder = async () => {
   const promoCode = promoStore.activeDiscount?.promo.code ?? undefined
-  const orderId = await orderStore.createOrder(
-    cartStore.cartId!,
-    selectedAddressId.value ?? undefined,
-    promoCode,
-    shippingCost.value,
-  )
-  if (!orderId) return
-
-  promoStore.reset()
-  cartStore.clearCart()
-  router.push(`/success?orderId=${orderId}`)
+  try {
+    const order = await createOrderMutate({
+      cartId: cartStore.cartId!,
+      addressId: selectedAddressId.value ?? undefined,
+      promoCode,
+      shippingCost: shippingCost.value,
+    })
+    promoStore.reset()
+    cartStore.clearCart()
+    router.push(`/success?orderId=${order.id}`)
+  } catch {
+    // error exposed via orderError
+  }
 }
 </script>
 
@@ -144,11 +145,11 @@ const createOrder = async () => {
           <section class="section">
             <h2 class="section-title">Delivery Address</h2>
 
-            <div v-if="addressStore.loading" class="address-loading">Loading addresses…</div>
+            <div v-if="addressesLoading" class="address-loading">Loading addresses…</div>
 
             <div v-else class="address-options">
               <!-- Saved addresses -->
-              <label v-for="addr in addressStore.items" :key="addr.id" class="address-option"
+              <label v-for="addr in addresses" :key="addr.id" class="address-option"
                 :class="{ 'is-selected': selectedAddressId === addr.id && !showNewAddressForm }"
                 @click="selectAddress(addr.id)">
                 <input type="radio" name="address" :value="addr.id"
@@ -290,10 +291,10 @@ const createOrder = async () => {
             <p v-if="hasStockIssue" class="order-error">
               Some items in your cart are out of stock. Please update your cart before placing an order.
             </p>
-            <p v-else-if="orderStore.error" class="order-error">{{ orderStore.error }}</p>
-            <BaseButton size="lg" full-width :loading="orderStore.loading" :disabled="hasStockIssue"
+            <p v-else-if="orderError" class="order-error">{{ (orderError as Error).message }}</p>
+            <BaseButton size="lg" full-width :loading="orderLoading" :disabled="hasStockIssue"
               @click="createOrder">
-              {{ orderStore.loading ? 'Placing order…' : 'Place Order' }}
+              {{ orderLoading ? 'Placing order…' : 'Place Order' }}
             </BaseButton>
           </section>
         </div>

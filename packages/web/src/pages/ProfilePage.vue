@@ -1,21 +1,20 @@
 <script lang="ts" setup>
-import { ref, watch, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useOrderStore } from '@/stores/order'
-import { useAddressStore } from '@/stores/address'
-import { api } from '@/services/api'
-import { formatPrice } from '@/utils/format'
-import EmptyState from '@/components/EmptyState.vue'
-import BaseInput from '@/components/BaseInput.vue'
-import BaseButton from '@/components/BaseButton.vue'
 import AddressForm from '@/components/AddressForm.vue'
+import BaseButton from '@/components/BaseButton.vue'
+import BaseInput from '@/components/BaseInput.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import { addressesQuery, useDeleteAddress } from '@/queries/useAddresses'
+import { ordersQuery } from '@/queries/useOrders'
+import { api } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { formatPrice } from '@/utils/format'
+import { useQuery } from '@pinia/colada'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const orderStore = useOrderStore()
-const addressStore = useAddressStore()
 
 const tab = computed(() => route.params.tab as string)
 
@@ -54,25 +53,22 @@ const submitPasswordChange = async () => {
   }
 }
 
-// Orders
-const ordersFetched = ref(false)
+// Orders — enabled only when tab is 'orders'
+const { data: ordersData, isPending: ordersLoading } = useQuery({
+  ...ordersQuery,
+  enabled: computed(() => tab.value === 'orders'),
+})
+const orders = computed(() => ordersData.value ?? [])
 
-// Addresses
-const addressesFetched = ref(false)
+// Addresses — enabled only when tab is 'addresses'
+const { data: addressesData, isPending: addressesLoading } = useQuery({
+  ...addressesQuery,
+  enabled: computed(() => tab.value === 'addresses'),
+})
+const addressItems = computed(() => addressesData.value ?? [])
+
+const { mutateAsync: deleteAddress } = useDeleteAddress()
 const showAddressForm = ref(false)
-
-const fetchIfNeeded = (t: string) => {
-  if (t === 'orders' && !ordersFetched.value) {
-    ordersFetched.value = true
-    orderStore.getOrders()
-  }
-  if (t === 'addresses' && !addressesFetched.value) {
-    addressesFetched.value = true
-    addressStore.fetchAddresses()
-  }
-}
-
-watch(tab, fetchIfNeeded, { immediate: true })
 
 const memberSince = computed(() => {
   if (!authStore.user?.createdAt) return ''
@@ -164,20 +160,20 @@ const memberSince = computed(() => {
                 <p class="section-label">Delivery</p>
                 <h1 class="section-title">My Addresses</h1>
               </div>
-              <BaseButton v-if="!showAddressForm && !addressStore.loading" variant="dark" size="sm"
+              <BaseButton v-if="!showAddressForm && !addressesLoading" variant="dark" size="sm"
                 @click="showAddressForm = true">
                 + Add New
               </BaseButton>
             </div>
 
-            <div v-if="addressStore.loading" class="loading-msg">Loading addresses...</div>
+            <div v-if="addressesLoading" class="loading-msg">Loading addresses...</div>
 
             <template v-else>
-              <EmptyState v-if="addressStore.items.length === 0 && !showAddressForm" heading="No saved addresses"
+              <EmptyState v-if="addressItems.length === 0 && !showAddressForm" heading="No saved addresses"
                 message="Add an address to speed up checkout." link-to="/checkout" link-text="Go to checkout →" />
 
-              <ul v-if="addressStore.items.length > 0" class="addresses-list">
-                <li v-for="addr in addressStore.items" :key="addr.id" class="address-card">
+              <ul v-if="addressItems.length > 0" class="addresses-list">
+                <li v-for="addr in addressItems" :key="addr.id" class="address-card">
                   <div class="address-card-body">
                     <div>
                       <p v-if="addr.label" class="address-card-label">{{ addr.label }}</p>
@@ -189,7 +185,7 @@ const memberSince = computed(() => {
                       </p>
                       <p class="address-card-line address-card-country">{{ addr.country }}</p>
                     </div>
-                    <BaseButton variant="ghost" size="sm" @click="addressStore.deleteAddress(addr.id)">
+                    <BaseButton variant="ghost" size="sm" @click="deleteAddress(addr.id)">
                       Remove
                     </BaseButton>
                   </div>
@@ -208,11 +204,11 @@ const memberSince = computed(() => {
               <p class="section-label">Purchase History</p>
               <h1 class="section-title">My Orders</h1>
             </div>
-            <div v-if="orderStore.loading" class="loading-msg">Loading orders...</div>
-            <EmptyState v-else-if="orderStore.orders.length === 0" heading="No orders yet"
+            <div v-if="ordersLoading" class="loading-msg">Loading orders...</div>
+            <EmptyState v-else-if="orders.length === 0" heading="No orders yet"
               message="Your completed orders will appear here." link-to="/" link-text="Start shopping →" />
             <ul v-else class="orders-list">
-              <li v-for="order in orderStore.orders" :key="order.id" class="order-card">
+              <li v-for="order in orders" :key="order.id" class="order-card">
                 <div class="order-card-header">
                   <div>
                     <p class="order-id">Order #{{ order.id.slice(0, 8).toUpperCase() }}</p>
@@ -237,7 +233,7 @@ const memberSince = computed(() => {
                     <span class="order-item-qty">× {{ item.quantity }}</span>
                     <span class="order-item-price">{{
                       formatPrice(item.price * item.quantity)
-                    }}</span>
+                      }}</span>
                   </li>
                 </ul>
               </li>

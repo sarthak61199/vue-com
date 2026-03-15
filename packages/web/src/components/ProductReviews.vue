@@ -1,61 +1,40 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { api, type ApiReview } from '@/services/api'
+import { ref, computed } from 'vue'
+import { useQuery } from '@pinia/colada'
 import { useAuthStore } from '@/stores/auth'
+import { productReviewsQuery, reviewEligibilityQuery, useSubmitReview } from '@/queries/useReviews'
 import StarRating from '@/components/StarRating.vue'
 import ReviewForm from '@/components/ReviewForm.vue'
 
 const props = defineProps<{ productId: string }>()
-const emit = defineEmits<{ reviewSubmitted: [] }>()
 
 const authStore = useAuthStore()
 
-const reviews = ref<ApiReview[]>([])
-const averageRating = ref<number | null>(null)
-const reviewCount = ref(0)
-const canReview = ref(false)
-const existingReview = ref<ApiReview | null>(null)
-const loading = ref(true)
+const { data: reviewsData, isPending: loading } = useQuery(
+  () => productReviewsQuery(props.productId),
+)
 
-const submitting = ref(false)
-const submitError = ref<string | null>(null)
-const submitSuccess = ref(false)
-
-onMounted(async () => {
-  const [reviewsRes, eligibilityRes] = await Promise.all([
-    api.getProductReviews(props.productId),
-    authStore.user ? api.getReviewEligibility(props.productId) : null,
-  ])
-
-  reviews.value = reviewsRes.reviews
-  averageRating.value = reviewsRes.averageRating
-  reviewCount.value = reviewsRes.reviewCount
-
-  if (eligibilityRes) {
-    canReview.value = eligibilityRes.canReview
-    existingReview.value = eligibilityRes.existingReview
-  }
-
-  loading.value = false
+const { data: eligibilityData } = useQuery({
+  ...reviewEligibilityQuery(props.productId),
+  enabled: computed(() => !!authStore.user),
 })
 
+const reviews = computed(() => reviewsData.value?.reviews ?? [])
+const averageRating = computed(() => reviewsData.value?.averageRating ?? null)
+const reviewCount = computed(() => reviewsData.value?.reviewCount ?? 0)
+const canReview = computed(() => eligibilityData.value?.canReview ?? false)
+const existingReview = computed(() => eligibilityData.value?.existingReview ?? null)
+
+const { mutateAsync: submitReviewMutate, isLoading: submitting, error: submitError } = useSubmitReview()
+const successMsg = ref(false)
+
 async function submit(rating: number, body: string) {
-  submitting.value = true
-  submitError.value = null
-  submitSuccess.value = false
+  successMsg.value = false
   try {
-    const review = await api.submitReview(props.productId, rating, body || undefined)
-    existingReview.value = review
-    const reviewsRes = await api.getProductReviews(props.productId)
-    reviews.value = reviewsRes.reviews
-    averageRating.value = reviewsRes.averageRating
-    reviewCount.value = reviewsRes.reviewCount
-    submitSuccess.value = true
-    emit('reviewSubmitted')
-  } catch (e) {
-    submitError.value = (e as Error).message
-  } finally {
-    submitting.value = false
+    await submitReviewMutate({ productId: props.productId, rating, body: body || undefined })
+    successMsg.value = true
+  } catch {
+    // error exposed via submitError
   }
 }
 </script>
@@ -78,8 +57,8 @@ async function submit(rating: number, body: string) {
       v-if="authStore.user && canReview"
       :existing-review="existingReview"
       :submitting="submitting"
-      :submit-error="submitError"
-      :submit-success="submitSuccess"
+      :submit-error="submitError ? (submitError as Error).message : null"
+      :submit-success="successMsg"
       @submit="submit"
     />
 

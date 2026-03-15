@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import { useOrderStore } from '@/stores/order'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { onMounted } from 'vue'
+import { useQuery } from '@pinia/colada'
+import { orderQuery } from '@/queries/useOrders'
 import { IMAGE } from '@/constants'
 import { formatPrice } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 
-const orderStore = useOrderStore()
-
 const orderId = route.query.orderId as string
 
-onMounted(async () => {
-  if (!orderId) {
-    router.push('/')
-    return
-  }
-  await orderStore.getOrderById(orderId)
-})
+if (!orderId) {
+  router.push('/')
+}
+
+const { data: order } = useQuery(
+  () => orderQuery(orderId),
+)
 </script>
 
 <template>
@@ -52,7 +51,7 @@ onMounted(async () => {
 
         <ul class="order-list">
           <li
-            v-for="orderItem in orderStore.currentOrder?.orderItems"
+            v-for="orderItem in order?.orderItems"
             :key="orderItem.variantId"
             class="order-item"
           >
@@ -79,7 +78,7 @@ onMounted(async () => {
         <div class="order-total">
           <span class="order-total-label">Total</span>
           <span class="order-total-value">{{
-            orderStore.currentOrder ? formatPrice(orderStore.currentOrder.total) : ''
+            order ? formatPrice(order.total) : ''
           }}</span>
         </div>
       </div>

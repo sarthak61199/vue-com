@@ -35,37 +35,19 @@ const handleSubmit = async () => {
         <form class="form" @submit.prevent="handleSubmit">
           <div class="field">
             <label class="field-label" for="email">Email</label>
-            <BaseInput
-              id="email"
-              v-model.trim="email"
-              type="email"
-              placeholder="you@example.com"
-              autocomplete="email"
-              required
-            />
+            <BaseInput id="email" v-model.trim="email" type="email" placeholder="you@example.com" autocomplete="email"
+              required />
           </div>
 
           <div class="field">
             <label class="field-label" for="password">Password</label>
-            <BaseInput
-              id="password"
-              v-model.trim="password"
-              type="password"
-              placeholder="••••••••"
-              autocomplete="current-password"
-              required
-            />
+            <BaseInput id="password" v-model.trim="password" type="password" placeholder="••••••••"
+              autocomplete="current-password" required />
           </div>
 
           <p v-if="authStore.error" class="error-msg">{{ authStore.error }}</p>
 
-          <BaseButton
-            type="submit"
-            size="lg"
-            full-width
-            :loading="authStore.loading"
-            style="margin-top: 0.25rem"
-          >
+          <BaseButton type="submit" size="lg" full-width :loading="authStore.loading" style="margin-top: 0.25rem">
             {{ authStore.loading ? 'Signing in…' : 'Sign in' }}
           </BaseButton>
         </form>

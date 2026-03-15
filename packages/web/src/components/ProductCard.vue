@@ -2,7 +2,9 @@
 import { IMAGE } from '@/constants'
 import type { ApiProduct, ApiDisplayPromo } from '@/services/api'
 import { formatPrice } from '@/utils/format'
-import { usePromoStore } from '@/stores/promo'
+import { getPromoForProduct, getDiscountedPrice } from '@/utils/promo'
+import { useQuery } from '@pinia/colada'
+import { displayPromosQuery } from '@/queries/useDisplayPromos'
 import { computed } from 'vue'
 import StarRating from '@/components/StarRating.vue'
 import WishlistButton from '@/components/WishlistButton.vue'
@@ -11,25 +13,25 @@ const props = defineProps<{
   product: ApiProduct
 }>()
 
-const promoStore = usePromoStore()
+const { data: displayPromos } = useQuery(displayPromosQuery)
 
 const activePromo = computed<ApiDisplayPromo | null>(() =>
-  promoStore.getPromoForProduct(props.product),
+  getPromoForProduct(displayPromos.value ?? [], props.product),
 )
 
 const saleMin = computed(() =>
   activePromo.value && props.product.priceRange
-    ? promoStore.getDiscountedPrice(props.product.priceRange.min, activePromo.value)
+    ? getDiscountedPrice(props.product.priceRange.min, activePromo.value)
     : null,
 )
 const saleMax = computed(() =>
   activePromo.value && props.product.priceRange
-    ? promoStore.getDiscountedPrice(props.product.priceRange.max, activePromo.value)
+    ? getDiscountedPrice(props.product.priceRange.max, activePromo.value)
     : null,
 )
 const saleFlat = computed(() =>
   activePromo.value && !(props.product.priceRange && props.product.priceRange.min !== props.product.priceRange.max)
-    ? promoStore.getDiscountedPrice(props.product.price, activePromo.value)
+    ? getDiscountedPrice(props.product.price, activePromo.value)
     : null,
 )
 

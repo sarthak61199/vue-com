@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
-import { useWishlistStore } from '@/stores/wishlist'
-import { usePromoStore } from '@/stores/promo'
 import { useRoute, useRouter } from 'vue-router'
-import { ref, onMounted, computed, watch } from 'vue'
-import { api, type ApiProduct, type ApiProductVariant } from '@/services/api'
+import { ref, computed, watch } from 'vue'
+import { useQuery } from '@pinia/colada'
+import type { ApiProductVariant } from '@/services/api'
 import { IMAGE } from '@/constants'
 import { formatPrice } from '@/utils/format'
+import { getPromoForProduct, getDiscountedPrice } from '@/utils/promo'
+import { productQuery } from '@/queries/useProduct'
+import { recommendationsQuery } from '@/queries/useRecommendations'
+import { displayPromosQuery } from '@/queries/useDisplayPromos'
+import { wishlistQuery } from '@/queries/useWishlist'
 import QuantityStepper from '@/components/QuantityStepper.vue'
 import StarRating from '@/components/StarRating.vue'
 import ProductReviews from '@/components/ProductReviews.vue'
@@ -19,15 +23,32 @@ const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
-const wishlistStore = useWishlistStore()
-const promoStore = usePromoStore()
 
 const productId = computed(() => route.params.id as string)
-const product = ref<ApiProduct | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
 const quantity = ref(1)
-const recommendations = ref<ApiProduct[]>([])
+
+// --- Queries ---
+const { data: product, isPending: loading, error } = useQuery(
+  () => productQuery(productId.value),
+)
+
+const { data: recommendationsData } = useQuery(
+  () => recommendationsQuery(productId.value),
+)
+const recommendations = computed(() => recommendationsData.value ?? [])
+
+const { data: displayPromos } = useQuery(displayPromosQuery)
+
+// Pre-fetch wishlist if authenticated
+useQuery({
+  ...wishlistQuery,
+  enabled: computed(() => !!authStore.user),
+})
+
+// Reset quantity when navigating between products
+watch(productId, () => {
+  quantity.value = 1
+})
 
 function slugify(str: string): string {
   return str
@@ -75,10 +96,10 @@ const displayPrice = computed(() => selectedVariant.value?.price ?? product.valu
 const displayImage = computed(() => selectedVariant.value?.image ?? product.value?.image ?? null)
 
 const activePromo = computed(() =>
-  product.value ? promoStore.getPromoForProduct(product.value) : null,
+  product.value ? getPromoForProduct(displayPromos.value ?? [], product.value) : null,
 )
 const salePrice = computed(() =>
-  activePromo.value ? promoStore.getDiscountedPrice(displayPrice.value, activePromo.value) : null,
+  activePromo.value ? getDiscountedPrice(displayPrice.value, activePromo.value) : null,
 )
 const saleBadgeLabel = computed(() => {
   if (!activePromo.value) return null
@@ -101,55 +122,29 @@ function isOptionSelected(typeId: string, optionId: string): boolean {
   return selectedOptions.value.get(typeId) === optionId
 }
 
-async function loadProduct(id: string) {
-  loading.value = true
-  error.value = null
-  product.value = null
-  recommendations.value = []
-  quantity.value = 1
-  try {
-    const fetches: Promise<unknown>[] = [api.getProductById(id)]
-    if (authStore.user) fetches.push(wishlistStore.fetchWishlist())
-    const [p] = await Promise.all(fetches)
-    product.value = p as ApiProduct
-    api.getRecommendations(id).then((items) => { recommendations.value = items }).catch(() => {})
-
-    // Auto-init query params from default variant if none are set
-    const prod = product.value
-    if (prod?.variantTypes?.length && prod.variants?.length) {
-      const defaultVariant = prod.variants.find((v) => v.isDefault) ?? prod.variants[0]
-      const query = { ...route.query }
-      let changed = false
-      for (const vt of prod.variantTypes) {
-        const key = slugify(vt.name)
-        if (!query[key]) {
-          const val = defaultVariant?.values.find((v) => v.option.variantTypeId === vt.id)
-          if (val) {
-            query[key] = val.optionId
-            changed = true
-          }
-        }
+// Auto-init query params from default variant when product loads or id changes
+watch(product, (prod) => {
+  if (!prod?.variantTypes?.length || !prod.variants?.length) return
+  const defaultVariant = prod.variants.find((v) => v.isDefault) ?? prod.variants[0]
+  const query = { ...route.query }
+  let changed = false
+  for (const vt of prod.variantTypes) {
+    const key = slugify(vt.name)
+    if (!query[key]) {
+      const val = defaultVariant?.values.find((v) => v.option.variantTypeId === vt.id)
+      if (val) {
+        query[key] = val.optionId
+        changed = true
       }
-      if (changed) router.replace({ query })
     }
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
   }
-}
-
-onMounted(() => loadProduct(productId.value))
-watch(productId, (id) => loadProduct(id))
+  if (changed) router.replace({ query })
+}, { immediate: true })
 
 async function addToCart() {
   const variant = selectedVariant.value
   if (!variant) return
   await cartStore.addToCart({ variantId: variant.id, quantity: quantity.value })
-}
-
-async function refreshProduct() {
-  product.value = await api.getProductById(productId.value)
 }
 </script>
 
@@ -159,7 +154,7 @@ async function refreshProduct() {
       <router-link to="/" class="back-link">← All Products</router-link>
 
       <p v-if="loading">Loading...</p>
-      <p v-else-if="error">{{ error }}</p>
+      <p v-else-if="error">{{ error.message }}</p>
 
       <div v-else-if="product" class="product-layout">
         <!-- Image -->
@@ -248,7 +243,7 @@ async function refreshProduct() {
         </div>
       </section>
 
-      <ProductReviews v-if="product" :product-id="product.id" @review-submitted="refreshProduct" />
+      <ProductReviews v-if="product" :product-id="product.id" />
 
       <div v-else-if="!loading" class="not-found">
         <p>Product not found.</p>
