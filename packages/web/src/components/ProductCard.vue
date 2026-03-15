@@ -24,11 +24,7 @@ const saleMin = computed(() =>
     ? getDiscountedPrice(props.product.priceRange.min, activePromo.value)
     : null,
 )
-const saleMax = computed(() =>
-  activePromo.value && props.product.priceRange
-    ? getDiscountedPrice(props.product.priceRange.max, activePromo.value)
-    : null,
-)
+
 const saleFlat = computed(() =>
   activePromo.value && !(props.product.priceRange && props.product.priceRange.min !== props.product.priceRange.max)
     ? getDiscountedPrice(props.product.price, activePromo.value)
@@ -53,19 +49,16 @@ const badgeLabel = computed(() => {
     <div class="product-info">
       <div class="product-name-row">
         <h3 class="product-name">{{ product.name }}</h3>
-        <StarRating
-          v-if="product.averageRating != null"
-          :rating="product.averageRating"
-          :count="product.reviewCount"
-          size="sm"
-        />
+        <StarRating v-if="product.averageRating != null" :rating="product.averageRating" :count="product.reviewCount"
+          size="sm" />
       </div>
       <p class="product-description">{{ product.description }}</p>
       <div class="product-footer">
         <span class="product-price">
           <template v-if="product.priceRange && product.priceRange.min !== product.priceRange.max">
             <span v-if="saleMin !== null" class="price-original">From {{ formatPrice(product.priceRange.min) }}</span>
-            <span :class="saleMin !== null ? 'price-sale' : ''">From {{ formatPrice(saleMin ?? product.priceRange.min) }}</span>
+            <span :class="saleMin !== null ? 'price-sale' : ''">From {{ formatPrice(saleMin ?? product.priceRange.min)
+              }}</span>
           </template>
           <template v-else>
             <span v-if="saleFlat !== null" class="price-original">{{ formatPrice(product.price) }}</span>

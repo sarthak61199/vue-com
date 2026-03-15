@@ -79,19 +79,15 @@ const hasStockIssue = computed(() =>
 
 const createOrder = async () => {
   const promoCode = promoStore.activeDiscount?.promo.code ?? undefined
-  try {
-    const order = await createOrderMutate({
-      cartId: cartStore.cartId!,
-      addressId: selectedAddressId.value ?? undefined,
-      promoCode,
-      shippingCost: shippingCost.value,
-    })
-    promoStore.reset()
-    cartStore.clearCart()
-    router.push(`/success?orderId=${order.id}`)
-  } catch {
-    // error exposed via orderError
-  }
+  const order = await createOrderMutate({
+    cartId: cartStore.cartId!,
+    addressId: selectedAddressId.value ?? undefined,
+    promoCode,
+    shippingCost: shippingCost.value,
+  })
+  promoStore.reset()
+  cartStore.clearCart()
+  router.push(`/success?orderId=${order.id}`)
 }
 </script>
 
