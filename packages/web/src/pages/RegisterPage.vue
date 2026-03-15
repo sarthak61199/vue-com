@@ -1,27 +1,22 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useForm } from '@tanstack/vue-form'
+import { RegisterSchema } from 'schemas'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseInput from '@/components/BaseInput.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 
-const email = ref('')
-const password = ref('')
-const confirm = ref('')
-const confirmError = ref<string | null>(null)
-
-const handleSubmit = async () => {
-  confirmError.value = null
-  if (password.value !== confirm.value) {
-    confirmError.value = 'Passwords do not match.'
-    return
-  }
-  await authStore.register(email.value, password.value)
-  if (authStore.user) router.push('/')
-}
+const form = useForm({
+  defaultValues: { email: '', password: '', confirm: '' },
+  validators: { onChange: RegisterSchema },
+  onSubmit: async ({ value }) => {
+    await authStore.register(value.email, value.password)
+    if (authStore.user) router.push('/')
+  },
+})
 </script>
 
 <template>
@@ -35,56 +30,65 @@ const handleSubmit = async () => {
           <h1 class="page-title">Create account</h1>
         </div>
 
-        <form class="form" @submit.prevent="handleSubmit">
-          <div class="field">
-            <label class="field-label" for="email">Email</label>
-            <BaseInput
-              id="email"
-              v-model="email"
-              type="email"
-              placeholder="you@example.com"
-              autocomplete="email"
-              required
-            />
-          </div>
+        <form class="form" @submit.prevent="form.handleSubmit">
+          <form.Field name="email">
+            <template #default="{ field }">
+              <div class="field">
+                <label class="field-label" :for="field.name">Email</label>
+                <BaseInput :id="field.name" type="email" placeholder="you@example.com" autocomplete="email"
+                  :value="field.state.value" :error="field.state.meta.isTouched && !field.state.meta.isValid"
+                  @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+                  @blur="field.handleBlur" />
+                <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="error-msg">
+                  {{ field.state.meta.errors[0].message }}
+                </p>
+              </div>
+            </template>
+          </form.Field>
 
-          <div class="field">
-            <label class="field-label" for="password">Password</label>
-            <BaseInput
-              id="password"
-              v-model="password"
-              type="password"
-              placeholder="••••••••"
-              autocomplete="new-password"
-              required
-            />
-          </div>
+          <form.Field name="password">
+            <template #default="{ field }">
+              <div class="field">
+                <label class="field-label" :for="field.name">Password</label>
+                <BaseInput :id="field.name" type="password" placeholder="••••••••" autocomplete="new-password"
+                  :value="field.state.value" :error="field.state.meta.isTouched && !field.state.meta.isValid"
+                  @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+                  @blur="field.handleBlur" />
+                <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="error-msg">
+                  {{ field.state.meta.errors[0].message }}
+                </p>
+              </div>
+            </template>
+          </form.Field>
 
-          <div class="field">
-            <label class="field-label" for="confirm">Confirm password</label>
-            <BaseInput
-              id="confirm"
-              v-model="confirm"
-              type="password"
-              placeholder="••••••••"
-              autocomplete="new-password"
-              :error="!!confirmError"
-              required
-            />
-          </div>
+          <form.Field name="confirm" :validators="{
+            onChange: ({ value, fieldApi }) =>
+              value !== fieldApi.form.getFieldValue('password') ? 'Passwords do not match.' : undefined,
+          }">
+            <template #default="{ field }">
+              <div class="field">
+                <label class="field-label" :for="field.name">Confirm password</label>
+                <BaseInput :id="field.name" type="password" placeholder="••••••••" autocomplete="new-password"
+                  :value="field.state.value" :error="field.state.meta.isTouched && !field.state.meta.isValid"
+                  @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+                  @blur="field.handleBlur" />
+                <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="error-msg">
+                  {{ field.state.meta.errors[0] }}
+                </p>
+              </div>
+            </template>
+          </form.Field>
 
-          <p v-if="confirmError" class="error-msg">{{ confirmError }}</p>
-          <p v-else-if="authStore.error" class="error-msg">{{ authStore.error }}</p>
+          <p v-if="authStore.error" class="error-msg">{{ authStore.error }}</p>
 
-          <BaseButton
-            type="submit"
-            size="lg"
-            full-width
-            :loading="authStore.loading"
-            style="margin-top: 0.25rem"
-          >
-            {{ authStore.loading ? 'Creating account…' : 'Create account' }}
-          </BaseButton>
+          <form.Subscribe>
+            <template #default="{ canSubmit, isSubmitting }">
+              <BaseButton type="submit" size="lg" full-width :loading="isSubmitting || authStore.loading"
+                :disabled="!canSubmit" style="margin-top: 0.25rem">
+                {{ isSubmitting || authStore.loading ? 'Creating account…' : 'Create account' }}
+              </BaseButton>
+            </template>
+          </form.Subscribe>
         </form>
 
         <p class="switch-text">

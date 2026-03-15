@@ -1,11 +1,10 @@
 <script lang="ts" setup>
 import AddressForm from '@/components/AddressForm.vue'
 import BaseButton from '@/components/BaseButton.vue'
-import BaseInput from '@/components/BaseInput.vue'
+import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { addressesQuery, useDeleteAddress } from '@/queries/useAddresses'
 import { ordersQuery } from '@/queries/useOrders'
-import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { formatPrice } from '@/utils/format'
 import { useQuery } from '@pinia/colada'
@@ -19,39 +18,6 @@ const authStore = useAuthStore()
 const tab = computed(() => route.params.tab as string)
 
 const navigateTo = (t: string) => router.push('/profile/' + t)
-
-// Change password form
-const currentPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
-const pwLoading = ref(false)
-const pwSuccess = ref('')
-const pwError = ref('')
-
-const submitPasswordChange = async () => {
-  pwSuccess.value = ''
-  pwError.value = ''
-  if (newPassword.value !== confirmPassword.value) {
-    pwError.value = 'New passwords do not match.'
-    return
-  }
-  if (newPassword.value.length < 6) {
-    pwError.value = 'New password must be at least 6 characters.'
-    return
-  }
-  pwLoading.value = true
-  try {
-    await api.changePassword(currentPassword.value, newPassword.value)
-    pwSuccess.value = 'Password updated successfully.'
-    currentPassword.value = ''
-    newPassword.value = ''
-    confirmPassword.value = ''
-  } catch (e) {
-    pwError.value = (e as Error).message
-  } finally {
-    pwLoading.value = false
-  }
-}
 
 // Orders — enabled only when tab is 'orders'
 const { data: ordersData, isPending: ordersLoading } = useQuery({
@@ -129,28 +95,7 @@ const memberSince = computed(() => {
               <p class="section-label">Security</p>
               <h1 class="section-title">Change Password</h1>
             </div>
-            <form class="pw-form" @submit.prevent="submitPasswordChange">
-              <div class="form-group">
-                <label class="form-label" for="currentPassword">Current Password</label>
-                <BaseInput id="currentPassword" v-model="currentPassword" type="password"
-                  autocomplete="current-password" required />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="newPassword">New Password</label>
-                <BaseInput id="newPassword" v-model="newPassword" type="password" autocomplete="new-password"
-                  required />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="confirmPassword">Confirm New Password</label>
-                <BaseInput id="confirmPassword" v-model="confirmPassword" type="password" autocomplete="new-password"
-                  required />
-              </div>
-              <p v-if="pwError" class="form-msg error-msg">{{ pwError }}</p>
-              <p v-if="pwSuccess" class="form-msg success-msg">{{ pwSuccess }}</p>
-              <BaseButton type="submit" variant="dark" :loading="pwLoading">
-                {{ pwLoading ? 'Updating…' : 'Update Password' }}
-              </BaseButton>
-            </form>
+            <ChangePasswordForm />
           </template>
 
           <!-- Addresses -->
@@ -233,7 +178,7 @@ const memberSince = computed(() => {
                     <span class="order-item-qty">× {{ item.quantity }}</span>
                     <span class="order-item-price">{{
                       formatPrice(item.price * item.quantity)
-                      }}</span>
+                    }}</span>
                   </li>
                 </ul>
               </li>
@@ -381,46 +326,6 @@ const memberSince = computed(() => {
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--color-charcoal);
-}
-
-/* Password form */
-.pw-form {
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  padding: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  max-width: 440px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.form-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-stone);
-}
-
-.form-msg {
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.error-msg {
-  color: var(--color-error);
-}
-
-.success-msg {
-  color: var(--color-mint-dark);
 }
 
 /* Orders */
@@ -628,8 +533,7 @@ const memberSince = computed(() => {
     align-items: flex-start;
   }
 
-  .address-form-wrap,
-  .pw-form {
+  .address-form-wrap {
     max-width: none;
     padding: 1.25rem;
   }

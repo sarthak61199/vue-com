@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useCreateAddress } from '@/queries/useAddresses'
 import type { ApiAddress } from '@/services/api'
+import { useForm } from '@tanstack/vue-form'
+import { CreateAddressSchema } from 'schemas'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 
@@ -10,76 +12,137 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const { mutateAsync: createAddress, isLoading: loading } = useCreateAddress()
-
-const fields = ref({ label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' })
+const { mutateAsync: createAddress } = useCreateAddress()
 const error = ref('')
 
-const submit = async () => {
-  error.value = ''
-  if (!fields.value.line1 || !fields.value.city || !fields.value.state || !fields.value.zip) {
-    error.value = 'Street address, city, state and ZIP are required.'
-    return
-  }
-  try {
-    const result = await createAddress({
-      label: fields.value.label || null,
-      line1: fields.value.line1,
-      line2: fields.value.line2 || null,
-      city: fields.value.city,
-      state: fields.value.state,
-      zip: fields.value.zip,
-      country: fields.value.country || 'US',
-    })
-    fields.value = { label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' }
-    emit('saved', result)
-  } catch (e) {
-    error.value = (e as Error).message
-  }
-}
+const form = useForm({
+  defaultValues: { label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' },
+  validators: { onChange: CreateAddressSchema },
+  onSubmit: async ({ value }) => {
+    error.value = ''
+    try {
+      const result = await createAddress({
+        label: value.label || null,
+        line1: value.line1,
+        line2: value.line2 || null,
+        city: value.city,
+        state: value.state,
+        zip: value.zip,
+        country: value.country || 'US',
+      })
+      form.reset()
+      emit('saved', result)
+    } catch (e) {
+      error.value = (e as Error).message
+    }
+  },
+})
 </script>
 
 <template>
-  <form class="address-form" @submit.prevent="submit">
+  <form class="address-form" @submit.prevent="form.handleSubmit">
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="af-label">Label <span class="optional">(optional)</span></label>
-        <BaseInput id="af-label" v-model="fields.label" placeholder="Home, Work…" />
-      </div>
+      <form.Field name="label">
+        <template #default="{ field }">
+          <div class="form-group">
+            <label class="form-label" :for="field.name">Label <span class="optional">(optional)</span></label>
+            <BaseInput :id="field.name" placeholder="Home, Work…" :value="field.state.value"
+              @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+              @blur="field.handleBlur" />
+          </div>
+        </template>
+      </form.Field>
     </div>
+
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="af-line1">Street Address *</label>
-        <BaseInput id="af-line1" v-model="fields.line1" placeholder="123 Main St" />
-      </div>
+      <form.Field name="line1">
+        <template #default="{ field }">
+          <div class="form-group">
+            <label class="form-label" :for="field.name">Street Address *</label>
+            <BaseInput :id="field.name" placeholder="123 Main St" :value="field.state.value"
+              :error="field.state.meta.isTouched && !field.state.meta.isValid"
+              @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+              @blur="field.handleBlur" />
+            <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="field-error">
+              {{ field.state.meta.errors[0].message }}
+            </p>
+          </div>
+        </template>
+      </form.Field>
     </div>
+
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="af-line2">Apt, Suite <span class="optional">(optional)</span></label>
-        <BaseInput id="af-line2" v-model="fields.line2" placeholder="Apt 4B" />
-      </div>
+      <form.Field name="line2">
+        <template #default="{ field }">
+          <div class="form-group">
+            <label class="form-label" :for="field.name">Apt, Suite <span class="optional">(optional)</span></label>
+            <BaseInput :id="field.name" placeholder="Apt 4B" :value="field.state.value"
+              @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+              @blur="field.handleBlur" />
+          </div>
+        </template>
+      </form.Field>
     </div>
+
     <div class="form-row form-row--3">
-      <div class="form-group">
-        <label class="form-label" for="af-city">City *</label>
-        <BaseInput id="af-city" v-model="fields.city" placeholder="New York" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="af-state">State *</label>
-        <BaseInput id="af-state" v-model="fields.state" placeholder="NY" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="af-zip">ZIP *</label>
-        <BaseInput id="af-zip" v-model="fields.zip" placeholder="10001" />
-      </div>
+      <form.Field name="city">
+        <template #default="{ field }">
+          <div class="form-group">
+            <label class="form-label" :for="field.name">City *</label>
+            <BaseInput :id="field.name" placeholder="New York" :value="field.state.value"
+              :error="field.state.meta.isTouched && !field.state.meta.isValid"
+              @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+              @blur="field.handleBlur" />
+            <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="field-error">
+              {{ field.state.meta.errors[0].message }}
+            </p>
+          </div>
+        </template>
+      </form.Field>
+
+      <form.Field name="state">
+        <template #default="{ field }">
+          <div class="form-group">
+            <label class="form-label" :for="field.name">State *</label>
+            <BaseInput :id="field.name" placeholder="NY" :value="field.state.value"
+              :error="field.state.meta.isTouched && !field.state.meta.isValid"
+              @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+              @blur="field.handleBlur" />
+            <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="field-error">
+              {{ (field.state.meta.errors[0] as any)?.message }}
+            </p>
+          </div>
+        </template>
+      </form.Field>
+
+      <form.Field name="zip">
+        <template #default="{ field }">
+          <div class="form-group">
+            <label class="form-label" :for="field.name">ZIP *</label>
+            <BaseInput :id="field.name" placeholder="10001" :value="field.state.value"
+              :error="field.state.meta.isTouched && !field.state.meta.isValid"
+              @input="(e: Event) => field.handleChange((e.target as HTMLInputElement).value)"
+              @blur="field.handleBlur" />
+            <p v-if="field.state.meta.isTouched && field.state.meta.errors[0]" class="field-error">
+              {{ field.state.meta.errors[0].message }}
+            </p>
+          </div>
+        </template>
+      </form.Field>
     </div>
+
     <p v-if="error" class="form-error">{{ error }}</p>
-    <div class="form-actions">
-      <BaseButton type="submit" variant="dark" :loading="loading">
-        {{ loading ? 'Saving…' : 'Save Address' }}
-      </BaseButton>
-      <BaseButton type="button" variant="ghost" @click="emit('cancel')"> Cancel </BaseButton>
-    </div>
+
+    <form.Subscribe>
+      <template #default="{ canSubmit, isSubmitting }">
+        <div class="form-actions">
+          <BaseButton type="submit" variant="dark" :loading="isSubmitting" :disabled="!canSubmit">
+            {{ isSubmitting ? 'Saving…' : 'Save Address' }}
+          </BaseButton>
+          <BaseButton type="button" variant="ghost" @click="emit('cancel')"> Cancel </BaseButton>
+        </div>
+      </template>
+    </form.Subscribe>
   </form>
 </template>
 
@@ -121,6 +184,12 @@ const submit = async () => {
   font-size: 0.6875rem;
   color: var(--color-stone);
   opacity: 0.7;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-error);
 }
 
 .form-error {
