@@ -143,13 +143,13 @@ export interface ApiWishlistItem {
 export interface ApiAddress {
   id: string
   userId: string
-  label: string | null
+  label?: string
   line1: string
-  line2: string | null
+  line2?: string
   city: string
   state: string
   zip: string
-  country: string
+  country?: string
   createdAt: string
 }
 

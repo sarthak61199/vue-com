@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useCreateAddress } from '@/queries/useAddresses'
 import type { ApiAddress } from '@/services/api'
 import { useForm } from '@tanstack/vue-form'
-import { CreateAddressSchema } from 'schemas'
+import { CreateAddressSchema, type CreateAddressSchemaType } from 'schemas'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 
@@ -16,20 +16,12 @@ const { mutateAsync: createAddress } = useCreateAddress()
 const error = ref('')
 
 const form = useForm({
-  defaultValues: { label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' },
+  defaultValues: { label: '', line1: '', line2: '', city: '', state: '', zip: '', country: 'US' } as CreateAddressSchemaType,
   validators: { onChange: CreateAddressSchema },
   onSubmit: async ({ value }) => {
     error.value = ''
     try {
-      const result = await createAddress({
-        label: value.label || null,
-        line1: value.line1,
-        line2: value.line2 || null,
-        city: value.city,
-        state: value.state,
-        zip: value.zip,
-        country: value.country || 'US',
-      })
+      const result = await createAddress(value)
       form.reset()
       emit('saved', result)
     } catch (e) {
