@@ -28,16 +28,17 @@ export const usePromoStore = defineStore('promo', () => {
   const { mutateAsync: validateMutate, isLoading: loading } = useMutation({
     mutation: ({ code, cartId }: { code: string; cartId: string }) =>
       api.validatePromo(code, cartId),
+    onSuccess: (data) => {
+      appliedPromo.value = data
+    },
+    onError: (e) => {
+      error.value = (e as Error).message
+      appliedPromo.value = null
+    },
   })
 
   async function validateCode(code: string, cartId: string) {
-    error.value = null
-    try {
-      appliedPromo.value = await validateMutate({ code, cartId })
-    } catch (e) {
-      error.value = (e as Error).message
-      appliedPromo.value = null
-    }
+    await validateMutate({ code, cartId })
   }
 
   function fetchAutoPromos(cartId: string) {

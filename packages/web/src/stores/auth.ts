@@ -1,27 +1,19 @@
 import { api, type ApiUser } from '@/services/api'
 import { defineStore } from 'pinia'
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useQuery, useMutation, useQueryCache } from '@pinia/colada'
 
 export const useAuthStore = defineStore('auth', () => {
   const queryCache = useQueryCache()
 
-  const { data: userData, status } = useQuery({
+  const { data: userData, refresh } = useQuery({
     key: ['auth', 'me'],
     query: () => api.getMe().catch(() => null),
   })
 
   const user = computed<ApiUser | null>(() => userData.value ?? null)
 
-  // Create a promise that resolves when the initial auth query settles
-  const initPromise = new Promise<void>((resolve) => {
-    const unwatch = watch(status, (s) => {
-      if (s !== 'pending') {
-        unwatch()
-        resolve()
-      }
-    }, { immediate: true })
-  })
+  const initPromise = refresh().then(() => {})
 
   const {
     mutateAsync: loginMutate,
