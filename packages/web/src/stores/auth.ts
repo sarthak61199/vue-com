@@ -25,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const {
     mutateAsync: loginMutate,
-    status: loginStatus,
+    asyncStatus: loginAsyncStatus,
     error: loginError,
   } = useMutation({
     mutation: async ({ email, password }: { email: string; password: string }) => {
@@ -38,7 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const {
     mutateAsync: registerMutate,
-    status: registerStatus,
+    asyncStatus: registerAsyncStatus,
     error: registerError,
   } = useMutation({
     mutation: async ({ email, password }: { email: string; password: string }) => {
@@ -61,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const mutationLoading = computed(
-    () => loginStatus.value === 'pending' || registerStatus.value === 'pending',
+    () => loginAsyncStatus.value === 'loading' || registerAsyncStatus.value === 'loading',
   )
   const mutationError = computed<string | null>(() => {
     const err = loginError.value || registerError.value
