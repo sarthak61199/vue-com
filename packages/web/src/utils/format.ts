@@ -1,4 +1,4 @@
-import type { ApiProductVariant } from '@/services/api'
+import type { ApiProductVariant } from 'api'
 
 export function formatPrice(amount: number): string {
   return `$${amount.toFixed(2)}`

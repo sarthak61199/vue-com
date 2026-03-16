@@ -1,5 +1,5 @@
 import { defineQueryOptions } from '@pinia/colada'
-import { api } from '@/services/api'
+import { api } from 'api'
 
 export const productQuery = defineQueryOptions((id: string) => ({
   key: ['products', id],

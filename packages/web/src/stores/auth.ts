@@ -1,4 +1,4 @@
-import { api, type ApiUser } from '@/services/api'
+import { api, type ApiUser } from 'api'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { useQuery, useMutation, useQueryCache } from '@pinia/colada'

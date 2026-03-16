@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useCreateAddress } from '@/queries/useAddresses'
-import type { ApiAddress } from '@/services/api'
+import type { ApiAddress } from 'api'
 import { useForm } from '@tanstack/vue-form'
 import { CreateAddressSchema, type CreateAddressSchemaType } from 'schemas'
 import { BaseInput, BaseButton } from 'ui'

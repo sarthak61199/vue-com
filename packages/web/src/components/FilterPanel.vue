@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApiCategory } from '@/services/api'
+import type { ApiCategory } from 'api'
 import { BaseInput } from 'ui'
 
 defineProps<{

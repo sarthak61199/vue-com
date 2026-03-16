@@ -1,5 +1,5 @@
 import { defineQueryOptions, defineMutation, useMutation, useQueryCache } from '@pinia/colada'
-import { api } from '@/services/api'
+import { api } from 'api'
 import { productQuery } from './useProduct'
 
 export const productReviewsQuery = defineQueryOptions((productId: string) => ({

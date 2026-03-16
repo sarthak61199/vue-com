@@ -1,4 +1,4 @@
-import { api } from '@/services/api'
+import { api } from 'api'
 import { defineMutation, defineQueryOptions, useMutation, useQueryCache } from '@pinia/colada'
 
 export const ordersQuery = defineQueryOptions({

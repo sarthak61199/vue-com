@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApiProduct, ApiProductVariant } from '@/services/api'
+import type { ApiProduct, ApiProductVariant } from 'api'
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

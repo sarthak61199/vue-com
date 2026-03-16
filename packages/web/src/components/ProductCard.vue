@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IMAGE } from '@/constants'
-import type { ApiProduct, ApiDisplayPromo } from '@/services/api'
+import type { ApiProduct, ApiDisplayPromo } from 'api'
 import { formatPrice } from '@/utils/format'
 import { getPromoForProduct, getDiscountedPrice } from '@/utils/promo'
 import { useQuery } from '@pinia/colada'

@@ -1,4 +1,4 @@
-import { api, type ApiCartItem } from '@/services/api'
+import { api, type ApiCartItem } from 'api'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryCache } from '@pinia/colada'

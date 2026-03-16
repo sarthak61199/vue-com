@@ -1,4 +1,4 @@
-import { api, type ApiPromoValidation } from '@/services/api'
+import { api, type ApiPromoValidation } from 'api'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useQuery, useMutation } from '@pinia/colada'

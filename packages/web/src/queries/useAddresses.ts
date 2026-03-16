@@ -1,5 +1,5 @@
 import { defineQueryOptions, defineMutation, useMutation, useQueryCache } from '@pinia/colada'
-import { api, type ApiAddress } from '@/services/api'
+import { api, type ApiAddress } from 'api'
 
 export const addressesQuery = defineQueryOptions({
   key: ['addresses'],

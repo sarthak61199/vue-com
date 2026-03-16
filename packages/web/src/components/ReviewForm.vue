@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { type ApiReview } from '@/services/api'
+import { type ApiReview } from 'api'
 import { BaseButton } from 'ui'
 
 const props = defineProps<{

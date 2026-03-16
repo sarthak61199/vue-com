@@ -17,6 +17,7 @@ export default defineConfig({
       { find: 'ui', replacement: fileURLToPath(new URL('../ui/src/index.ts', import.meta.url)) },
       { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
       { find: 'schemas', replacement: fileURLToPath(new URL('../schemas/src/index.ts', import.meta.url)) },
+      { find: 'api', replacement: fileURLToPath(new URL('../api/src/index.ts', import.meta.url)) },
     ],
   },
 })

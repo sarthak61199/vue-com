@@ -1,5 +1,5 @@
 import { defineQueryOptions, defineMutation, useMutation, useQueryCache } from '@pinia/colada'
-import { api } from '@/services/api'
+import { api } from 'api'
 
 export const wishlistQuery = defineQueryOptions({
   key: ['wishlist'],

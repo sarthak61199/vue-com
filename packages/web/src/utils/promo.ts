@@ -1,4 +1,4 @@
-import type { ApiDisplayPromo, ApiProduct } from '@/services/api'
+import type { ApiDisplayPromo, ApiProduct } from 'api'
 
 export function getDiscountedPrice(price: number, promo: ApiDisplayPromo): number {
   if (promo.discountType === 'PERCENTAGE') return price * (1 - promo.discountValue / 100)
