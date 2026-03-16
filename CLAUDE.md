@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Structure
 
-npm workspaces monorepo with three packages:
+npm workspaces monorepo with four packages:
 - `packages/web` — Vue 3 + TypeScript SPA (Vite)
 - `packages/server` — Hono REST API + Prisma + SQLite
 - `packages/schemas` — shared Zod validation schemas (imported by both web and server)
+- `packages/ui` — shared base UI components and theme CSS (imported by web; intended for future admin panel too)
 
 ## Commands
 
@@ -41,7 +42,9 @@ No test suite configured.
 Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Vue Router 5** — page components in `src/pages/`, registered manually in `src/router/index.ts`
 - **Pinia** — stores in `src/stores/`
-- **`@` alias** resolves to `src/`
+- **`@` alias** resolves to `src/`; **`ui`** alias resolves to `packages/ui/src/index.ts`; **`schemas`** alias resolves to `packages/schemas/src/index.ts`
+
+`src/index.css` imports `ui/theme.css` (CSS custom properties) and `ui/reset.css` (global resets) then adds the app-specific `#app` layout rule.
 
 `src/App.vue` renders `<AppHeader>`, `<router-view />`, and `<AppFooter>`. Routes: `/` (HomePage), `/product/:id` (ProductPage), `/cart` (CartPage), `/checkout` (CheckoutPage, requires auth), `/success` (SuccessPage), `/profile` (redirect → `/profile/info`), `/profile/info` | `/profile/password` | `/profile/orders` | `/profile/addresses` (ProfilePage, requires auth), `/profile/orders/:id` (OrderDetailPage, requires auth), `/wishlist` (WishlistPage, requires auth), `/login` (LoginPage, guest only), `/register` (RegisterPage, guest only), `/:pathMatch(.*)*` (NotFoundPage).
 
@@ -114,14 +117,15 @@ Variant label helper — use `getVariantLabel(variant)` from `src/utils/format.t
 
 ### Shared Components
 
-Base primitives (use these for forms and actions throughout the app):
-- **`BaseButton.vue`** — props: `variant` (`primary` | `dark` | `ghost` | `text`), `size` (`sm` | `md` | `lg`), `type`, `disabled`, `loading`, `fullWidth`. `loading` shows a spinner and disables the button.
-- **`BaseInput.vue`** — props: `modelValue`, `type`, `placeholder`, `id`, `disabled`, `error`, `variant` (`default` | `ghost`). Uses `inheritAttrs: false` with `v-bind="$attrs"` on the `<input>` so arbitrary HTML attributes (e.g. `autocomplete`, `required`) pass through directly.
+**Base primitives live in `packages/ui`** — import via `import { X } from 'ui'`:
+- **`BaseButton`** — props: `variant` (`primary` | `dark` | `ghost` | `text`), `size` (`sm` | `md` | `lg`), `type`, `disabled`, `loading`, `fullWidth`. `loading` shows a spinner and disables the button.
+- **`BaseInput`** — props: `modelValue`, `type`, `placeholder`, `id`, `disabled`, `error`, `variant` (`default` | `ghost`). Uses `inheritAttrs: false` with `v-bind="$attrs"` on the `<input>` so arbitrary HTML attributes (e.g. `autocomplete`, `required`) pass through directly.
+- **`EmptyState`** — props: `heading`, `message`; named slot `#action` for the link/button. The `.empty-link` CSS class is provided as a non-scoped style for use in slot content. Example: `<template #action><router-link to="/" class="empty-link">Go →</router-link></template>`
+- **`QuantityStepper`** — props: `quantity`, `disableMinus?`, `disablePlus?`; emits `change` with new quantity. Purely presentational — all disable logic is computed by the parent.
+- **`StarRating`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`.
+- **`PaginationControls`** — props: `page`, `total`, `pageSize`; emits `prev`/`next`.
 
-Feature components:
-- **`EmptyState.vue`** — props: `heading`, `message`, `linkTo`, `linkText`.
-- **`QuantityStepper.vue`** — props: `quantity`, `disableMinus?`, `disablePlus?`; emits `change` with new quantity. Purely presentational — all disable logic is computed by the parent.
-- **`StarRating.vue`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`.
+Feature components in `packages/web/src/components/`:
 - **`ProductReviews.vue`** — props: `productId`. Uses `productReviewsQuery` and `reviewEligibilityQuery` (eligibility only enabled when authenticated). `useSubmitReview` mutation invalidates reviews, eligibility, and product on success.
 - **`ReviewForm.vue`** — extracted form used inside `ProductReviews.vue`.
 - **`WishlistButton.vue`** — props: `productId`; self-contained heart toggle. Calls `useQuery(wishlistQuery)` (disabled for guests). Always calls `preventDefault` + `stopPropagation` (safe to nest inside `<router-link>`). Redirects guests to `/login?redirectTo=<current path>`.
@@ -141,13 +145,30 @@ Two linters run in sequence via `npm run lint`:
 
 Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-config-prettier` to avoid conflicts.
 
+## UI Package (`packages/ui/`)
+
+No build step — Vite in consuming packages compiles source directly via path aliases. To wire up a new consuming package (e.g. `packages/admin`):
+1. Add `"ui": "*"` to `dependencies` in its `package.json`
+2. Add aliases to its `vite.config.ts` as an **array** (order matters — CSS-specific aliases must come before `ui`):
+   ```ts
+   alias: [
+     { find: 'ui/theme.css', replacement: fileURLToPath(new URL('../ui/src/theme.css', import.meta.url)) },
+     { find: 'ui/reset.css', replacement: fileURLToPath(new URL('../ui/src/reset.css', import.meta.url)) },
+     { find: 'ui', replacement: fileURLToPath(new URL('../ui/src/index.ts', import.meta.url)) },
+   ]
+   ```
+3. Add matching `paths` entries to `tsconfig.app.json`
+4. In the app's global CSS: `@import 'ui/theme.css'; @import 'ui/reset.css';`
+
+New base/presentational components go in `packages/ui/src/components/` and must be re-exported from `packages/ui/src/index.ts`.
+
 ## Server Architecture (`packages/server/`)
 
 **Hono** on `@hono/node-server`, port 3000. CORS restricted to `http://localhost:5173` with `credentials: true`.
 
 ### Shared Schemas (`packages/schemas/`)
 
-Zod schemas shared between web and server. Server imports via `schemas` path alias (configured in `packages/server/tsconfig.json`). Exports: `RegisterSchema`, `LoginSchema`, `ChangePasswordSchema`, `ProductQuerySchema`, `CreateOrderSchema`, `AddCartItemSchema`, `UpdateCartItemSchema`, `CreateReviewSchema`, `AddWishlistItemSchema`, `CreateAddressSchema`, `ValidatePromoSchema`.
+Zod schemas shared between web and server. No build step — same source-import-via-alias pattern as `packages/ui`. Server imports via `schemas` path alias (configured in `packages/server/tsconfig.json`). Exports: `RegisterSchema`, `LoginSchema`, `ChangePasswordSchema`, `ProductQuerySchema`, `CreateOrderSchema`, `AddCartItemSchema`, `UpdateCartItemSchema`, `CreateReviewSchema`, `AddWishlistItemSchema`, `CreateAddressSchema`, `ValidatePromoSchema`.
 
 All server routes validate requests using the `validate()` helper from `src/lib/validate.ts` — wraps `@hono/zod-validator`, returns 400 with first error message on failure. Pattern:
 ```ts

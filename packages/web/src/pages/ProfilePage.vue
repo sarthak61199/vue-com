@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import AddressForm from '@/components/AddressForm.vue'
-import BaseButton from '@/components/BaseButton.vue'
+import { BaseButton, EmptyState } from 'ui'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
-import EmptyState from '@/components/EmptyState.vue'
 import { addressesQuery, useDeleteAddress } from '@/queries/useAddresses'
 import { ordersQuery } from '@/queries/useOrders'
 import { useAuthStore } from '@/stores/auth'
@@ -115,7 +114,11 @@ const memberSince = computed(() => {
 
             <template v-else>
               <EmptyState v-if="addressItems.length === 0 && !showAddressForm" heading="No saved addresses"
-                message="Add an address to speed up checkout." link-to="/checkout" link-text="Go to checkout →" />
+                message="Add an address to speed up checkout.">
+                <template #action>
+                  <router-link to="/checkout" class="empty-link">Go to checkout →</router-link>
+                </template>
+              </EmptyState>
 
               <ul v-if="addressItems.length > 0" class="addresses-list">
                 <li v-for="addr in addressItems" :key="addr.id" class="address-card">
@@ -151,7 +154,11 @@ const memberSince = computed(() => {
             </div>
             <div v-if="ordersLoading" class="loading-msg">Loading orders...</div>
             <EmptyState v-else-if="orders.length === 0" heading="No orders yet"
-              message="Your completed orders will appear here." link-to="/" link-text="Start shopping →" />
+              message="Your completed orders will appear here.">
+              <template #action>
+                <router-link to="/" class="empty-link">Start shopping →</router-link>
+              </template>
+            </EmptyState>
             <ul v-else class="orders-list">
               <li v-for="order in orders" :key="order.id" class="order-card">
                 <div class="order-card-header">

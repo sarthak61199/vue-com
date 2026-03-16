@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AddressForm from '@/components/AddressForm.vue'
-import BaseButton from '@/components/BaseButton.vue'
+import { BaseButton } from 'ui'
 import CheckoutItemList from '@/components/CheckoutItemList.vue'
 import CheckoutPromo from '@/components/CheckoutPromo.vue'
 import OrderTotals from '@/components/OrderTotals.vue'

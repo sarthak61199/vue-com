@@ -3,8 +3,7 @@ import { ref } from 'vue'
 import { useForm } from '@tanstack/vue-form'
 import { ChangePasswordSchema } from 'schemas'
 import { api } from '@/services/api'
-import BaseInput from '@/components/BaseInput.vue'
-import BaseButton from '@/components/BaseButton.vue'
+import { BaseInput, BaseButton } from 'ui'
 
 const success = ref('')
 const error = ref('')

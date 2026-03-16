@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ApiCategory } from '@/services/api'
-import BaseInput from '@/components/BaseInput.vue'
+import { BaseInput } from 'ui'
 
 defineProps<{
   categories: ApiCategory[]

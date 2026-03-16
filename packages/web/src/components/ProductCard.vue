@@ -6,7 +6,7 @@ import { getPromoForProduct, getDiscountedPrice } from '@/utils/promo'
 import { useQuery } from '@pinia/colada'
 import { displayPromosQuery } from '@/queries/useDisplayPromos'
 import { computed } from 'vue'
-import StarRating from '@/components/StarRating.vue'
+import { StarRating } from 'ui'
 import WishlistButton from '@/components/WishlistButton.vue'
 
 const props = defineProps<{

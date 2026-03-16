@@ -13,11 +13,9 @@ import { productQuery } from '@/queries/useProduct'
 import { recommendationsQuery } from '@/queries/useRecommendations'
 import { displayPromosQuery } from '@/queries/useDisplayPromos'
 import { wishlistQuery } from '@/queries/useWishlist'
-import QuantityStepper from '@/components/QuantityStepper.vue'
-import StarRating from '@/components/StarRating.vue'
+import { QuantityStepper, StarRating, BaseButton } from 'ui'
 import ProductReviews from '@/components/ProductReviews.vue'
 import ProductCard from '@/components/ProductCard.vue'
-import BaseButton from '@/components/BaseButton.vue'
 import WishlistButton from '@/components/WishlistButton.vue'
 
 const route = useRoute()

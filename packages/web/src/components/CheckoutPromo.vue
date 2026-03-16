@@ -2,8 +2,7 @@
 import { ref } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { usePromoStore } from '@/stores/promo'
-import BaseInput from '@/components/BaseInput.vue'
-import BaseButton from '@/components/BaseButton.vue'
+import { BaseInput, BaseButton } from 'ui'
 
 const cartStore = useCartStore()
 const promoStore = usePromoStore()

@@ -4,9 +4,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { IMAGE } from '@/constants'
 import { formatPrice, getVariantLabel } from '@/utils/format'
-import QuantityStepper from '@/components/QuantityStepper.vue'
-import EmptyState from '@/components/EmptyState.vue'
-import BaseButton from '@/components/BaseButton.vue'
+import { QuantityStepper, EmptyState, BaseButton } from 'ui'
 
 const cartStore = useCartStore()
 const router = useRouter()
@@ -32,7 +30,11 @@ const hasStockIssue = computed(() =>
 
       <!-- Empty state -->
       <EmptyState v-if="cartStore.cartItems.length === 0" heading="Your cart is empty"
-        message="Looks like you haven't added anything yet." link-to="/" link-text="Browse products →" />
+        message="Looks like you haven't added anything yet.">
+        <template #action>
+          <router-link to="/" class="empty-link">Browse products →</router-link>
+        </template>
+      </EmptyState>
 
       <!-- Cart items -->
       <div v-else>

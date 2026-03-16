@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmptyState from '@/components/EmptyState.vue'
+import { EmptyState } from 'ui'
 </script>
 
 <template>
@@ -7,9 +7,11 @@ import EmptyState from '@/components/EmptyState.vue'
     <EmptyState
       heading="Page not found"
       message="The page you're looking for doesn't exist or has been moved."
-      link-to="/"
-      link-text="Back to home →"
-    />
+    >
+      <template #action>
+        <router-link to="/" class="empty-link">Back to home →</router-link>
+      </template>
+    </EmptyState>
   </main>
 </template>
 

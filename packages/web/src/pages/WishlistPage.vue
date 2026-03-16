@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useQuery } from '@pinia/colada'
 import { useCartStore } from '@/stores/cart'
 import { wishlistQuery, useToggleWishlist } from '@/queries/useWishlist'
-import EmptyState from '@/components/EmptyState.vue'
+import { EmptyState } from 'ui'
 import { IMAGE } from '@/constants'
 import { formatPrice } from '@/utils/format'
 
@@ -29,9 +29,11 @@ const { mutateAsync: toggleMutate } = useToggleWishlist()
         v-else-if="items.length === 0"
         heading="Your wishlist is empty"
         message="Save products you love and add them to your cart later."
-        link-to="/"
-        link-text="Browse products →"
-      />
+      >
+        <template #action>
+          <router-link to="/" class="empty-link">Browse products →</router-link>
+        </template>
+      </EmptyState>
 
       <ul v-else class="wishlist-list">
         <li v-for="item in items" :key="item.productId" class="wishlist-item">

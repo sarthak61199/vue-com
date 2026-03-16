@@ -1,0 +1,26 @@
+:root {
+  /* Colors */
+  --color-mint: #4ecba8;
+  --color-mint-dark: #2ea88a;
+  --color-mint-50: #edfbf6;
+  --color-mint-100: #c8f0e2;
+  --color-charcoal: #1a2028;
+  --color-stone: #627280;
+  --color-stone-light: #96a5ae;
+  --color-cream: #f4f8f6;
+  --color-border: #c2ded7;
+
+  /* Semantic status colors */
+  --color-sale: #c0392b;
+  --color-sale-bg: #fdf0ef;
+  --color-error: #d94f4f;
+  --color-warning: #b45309;
+  --color-oos: #b91c1c;
+
+  /* Typography */
+  --font-sans: "Titillium Web", sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(26, 32, 40, 0.07);
+  --shadow-card-hover: 0 10px 32px rgba(26, 32, 40, 0.14);
+}

@@ -2,8 +2,6 @@
 defineProps<{
   heading: string
   message: string
-  linkTo: string
-  linkText: string
 }>()
 </script>
 
@@ -12,7 +10,7 @@ defineProps<{
     <div class="empty-glyph" aria-hidden="true">○</div>
     <h2 class="empty-heading">{{ heading }}</h2>
     <p class="empty-message">{{ message }}</p>
-    <router-link :to="linkTo" class="empty-link">{{ linkText }}</router-link>
+    <slot name="action" />
   </div>
 </template>
 
@@ -48,7 +46,9 @@ defineProps<{
   color: var(--color-stone);
   margin-bottom: 1.75rem;
 }
+</style>
 
+<style>
 .empty-link {
   font-size: 0.875rem;
   font-weight: 700;

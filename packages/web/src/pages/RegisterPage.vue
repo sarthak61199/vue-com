@@ -3,8 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useForm } from '@tanstack/vue-form'
 import { RegisterSchema } from 'schemas'
-import BaseButton from '@/components/BaseButton.vue'
-import BaseInput from '@/components/BaseInput.vue'
+import { BaseButton, BaseInput } from 'ui'
 
 const authStore = useAuthStore()
 const router = useRouter()

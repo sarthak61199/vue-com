@@ -8,10 +8,7 @@ import { displayPromosQuery } from '@/queries/useDisplayPromos'
 import { productsQuery } from '@/queries/useProducts'
 import type { ProductFilters } from '@/services/api'
 import ProductCard from '@/components/ProductCard.vue'
-import PaginationControls from '@/components/PaginationControls.vue'
-import EmptyState from '@/components/EmptyState.vue'
-import BaseButton from '@/components/BaseButton.vue'
-import BaseInput from '@/components/BaseInput.vue'
+import { PaginationControls, EmptyState, BaseButton, BaseInput } from 'ui'
 import FilterPanel from '@/components/FilterPanel.vue'
 
 const PAGE_SIZE = 9
@@ -213,9 +210,11 @@ const hasActiveFilters = computed(
                 currentSearch ? `No results for &quot;${currentSearch}&quot;` : 'No products found'
               "
               message="Try adjusting your filters or search term."
-              link-to="/"
-              link-text="Clear all →"
-            />
+            >
+              <template #action>
+                <router-link to="/" class="empty-link">Clear all →</router-link>
+              </template>
+            </EmptyState>
 
             <template v-else>
               <ul class="product-grid">

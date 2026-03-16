@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useQuery } from '@pinia/colada'
 import { useAuthStore } from '@/stores/auth'
 import { productReviewsQuery, reviewEligibilityQuery, useSubmitReview } from '@/queries/useReviews'
-import StarRating from '@/components/StarRating.vue'
+import { StarRating } from 'ui'
 import ReviewForm from '@/components/ReviewForm.vue'
 
 const props = defineProps<{ productId: string }>()

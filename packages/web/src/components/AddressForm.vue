@@ -4,8 +4,7 @@ import { useCreateAddress } from '@/queries/useAddresses'
 import type { ApiAddress } from '@/services/api'
 import { useForm } from '@tanstack/vue-form'
 import { CreateAddressSchema, type CreateAddressSchemaType } from 'schemas'
-import BaseInput from '@/components/BaseInput.vue'
-import BaseButton from '@/components/BaseButton.vue'
+import { BaseInput, BaseButton } from 'ui'
 
 const emit = defineEmits<{
   saved: [address: ApiAddress]
