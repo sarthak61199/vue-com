@@ -17,7 +17,7 @@
   "dependencies": {
     "@fontsource/titillium-web": "^5.2.8",
     "@pinia/colada": "^1.0.0",
-    "@tanstack/vue-form": "^1.0.0",
+    "@tanstack/vue-form": "^1.28.5",
     "pinia": "^3.0.4",
     "api": "*",
     "schemas": "*",
