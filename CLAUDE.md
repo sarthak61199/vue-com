@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Structure
 
-npm workspaces monorepo with four packages:
+npm workspaces monorepo with five packages:
 - `packages/web` — Vue 3 + TypeScript SPA (Vite)
 - `packages/server` — Hono REST API + Prisma + SQLite
 - `packages/schemas` — shared Zod validation schemas (imported by both web and server)
 - `packages/ui` — shared base UI components and theme CSS (imported by web; intended for future admin panel too)
+- `packages/api` — API fetch client and all response types (imported by web; intended for future admin panel too)
 
 ## Commands
 
@@ -42,7 +43,7 @@ No test suite configured.
 Vue 3 + TypeScript SPA scaffolded with Vite. Stack:
 - **Vue Router 5** — page components in `src/pages/`, registered manually in `src/router/index.ts`
 - **Pinia** — stores in `src/stores/`
-- **`@` alias** resolves to `src/`; **`ui`** alias resolves to `packages/ui/src/index.ts`; **`schemas`** alias resolves to `packages/schemas/src/index.ts`
+- **`@` alias** resolves to `src/`; **`ui`** alias resolves to `packages/ui/src/index.ts`; **`schemas`** alias resolves to `packages/schemas/src/index.ts`; **`api`** alias resolves to `packages/api/src/index.ts`
 
 `src/index.css` imports `ui/theme.css` (CSS custom properties) and `ui/reset.css` (global resets) then adds the app-specific `#app` layout rule.
 
@@ -54,7 +55,7 @@ Route guards in `src/router/index.ts` use `meta.requiresAuth` and `meta.guestOnl
 
 ### Data layer (web)
 
-All API types and the `api` object live in `src/services/api.ts`.
+All API types and the `api` fetch client live in `packages/api/src/index.ts` — import via `import { api, ApiProduct, ... } from 'api'`.
 
 **Data fetching uses [Pinia Colada](https://github.com/posva/pinia-colada)** (registered in `main.ts` with global `staleTime: 30s`, `gcTime: 5min`, `refetchOnWindowFocus: true`). Query option factories and mutations live in `src/queries/`:
 
@@ -87,7 +88,7 @@ Font: **Titillium Web** (400 & 700 weights) via `@fontsource/titillium-web` in `
 
 ### API Types
 
-Key types in `src/services/api.ts`:
+Key types in `packages/api/src/index.ts`:
 
 - **`ApiProduct`** — includes optional `variantTypes?`, `variants?`, `priceRange?: { min, max }`, `defaultVariantId?`, `averageRating?`, `reviewCount?`. Ratings computed server-side.
 - **`ApiVariantType`** — `{ id, name, position, options: ApiVariantOption[] }`. Options ordered by `position`.
@@ -144,6 +145,13 @@ Two linters run in sequence via `npm run lint`:
 2. **eslint** — Vue-specific rules, configured in `eslint.config.ts`
 
 Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-config-prettier` to avoid conflicts.
+
+## API Package (`packages/api/`)
+
+No build step — Vite in consuming packages compiles source directly via the `api` path alias. To wire up a new consuming package (e.g. `packages/admin`):
+1. Add `"api": "*"` to `dependencies` in its `package.json`
+2. Add `{ find: 'api', replacement: fileURLToPath(new URL('../api/src/index.ts', import.meta.url)) }` to the `alias` array in `vite.config.ts`
+3. Add `"api": ["../api/src/index.ts"]` to `paths` in `tsconfig.app.json`
 
 ## UI Package (`packages/ui/`)
 
