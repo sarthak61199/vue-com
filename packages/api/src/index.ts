@@ -18,6 +18,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface ApiUser {
   id: string
   email: string
+  role: string
   createdAt: string
 }
 
@@ -193,6 +194,100 @@ export interface ApiOrder {
   orderItems: ApiOrderItem[]
 }
 
+// --- Admin types ---
+
+export interface ApiAdminOrderSummary {
+  id: string
+  total: number
+  discountAmount: number
+  shippingCost: number
+  createdAt: string
+  user: { id: string; email: string }
+  _count: { orderItems: number }
+}
+
+export interface ApiAdminOrdersPage {
+  orders: ApiAdminOrderSummary[]
+  total: number
+}
+
+export interface ApiAdminOrder {
+  id: string
+  total: number
+  discountAmount: number
+  shippingCost: number
+  createdAt: string
+  updatedAt: string
+  user: { id: string; email: string }
+  address: ApiAddress | null
+  promo: ApiPromo | null
+  orderItems: ApiOrderItem[]
+}
+
+export interface ApiAdminUserSummary {
+  id: string
+  email: string
+  role: string
+  createdAt: string
+  _count: { orders: number; reviews: number }
+}
+
+export interface ApiAdminUsersPage {
+  users: ApiAdminUserSummary[]
+  total: number
+}
+
+export interface ApiAdminUser {
+  id: string
+  email: string
+  role: string
+  createdAt: string
+  orders: { id: string; total: number; createdAt: string; _count: { orderItems: number } }[]
+  reviews: (ApiReview & { product: { id: string; name: string } })[]
+  addresses: ApiAddress[]
+}
+
+export interface ApiAdminReview {
+  id: string
+  userId: string
+  productId: string
+  rating: number
+  body: string | null
+  createdAt: string
+  updatedAt: string
+  user: { id: string; email: string }
+  product: { id: string; name: string }
+}
+
+export interface ApiAdminReviewsPage {
+  reviews: ApiAdminReview[]
+  total: number
+}
+
+export interface ApiAdminVariantSummary {
+  id: string
+  stock: number
+  price: number
+  isDefault: boolean
+  values: { option: { value: string } }[]
+  product: { id: string; name: string }
+}
+
+export interface ApiDashboardStats {
+  totalProducts: number
+  totalOrders: number
+  totalUsers: number
+  totalRevenue: number
+  recentOrders: {
+    id: string
+    total: number
+    createdAt: string
+    user: { email: string }
+    _count: { orderItems: number }
+  }[]
+  lowStockVariants: ApiAdminVariantSummary[]
+}
+
 // --- API ---
 
 export const api = {
@@ -288,4 +383,29 @@ export const api = {
     request<ApiAddress>('/addresses', { method: 'POST', body: JSON.stringify(data) }),
   deleteAddress: (id: string) =>
     request<{ success: boolean }>(`/addresses/${id}`, { method: 'DELETE' }),
+}
+
+export const adminApi = {
+  getStats: () => request<ApiDashboardStats>('/admin/stats'),
+
+  listOrders: (page = 1, search?: string) => {
+    const params = new URLSearchParams({ page: String(page) })
+    if (search) params.set('search', search)
+    return request<ApiAdminOrdersPage>(`/admin/orders?${params}`)
+  },
+  getOrder: (id: string) => request<ApiAdminOrder>(`/admin/orders/${id}`),
+
+  listUsers: (page = 1, search?: string) => {
+    const params = new URLSearchParams({ page: String(page) })
+    if (search) params.set('search', search)
+    return request<ApiAdminUsersPage>(`/admin/users?${params}`)
+  },
+  getUser: (id: string) => request<ApiAdminUser>(`/admin/users/${id}`),
+
+  listReviews: (page = 1, minRating?: number, maxRating?: number) => {
+    const params = new URLSearchParams({ page: String(page) })
+    if (minRating != null) params.set('minRating', String(minRating))
+    if (maxRating != null) params.set('maxRating', String(maxRating))
+    return request<ApiAdminReviewsPage>(`/admin/reviews?${params}`)
+  },
 }

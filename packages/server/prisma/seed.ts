@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import bcrypt from 'bcryptjs'
 import { PrismaClient, PromoScope, DiscountType } from './generated/client.js'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 
@@ -22,6 +23,8 @@ async function main() {
   await prisma.promo.deleteMany()
   await prisma.product.deleteMany()
   await prisma.category.deleteMany()
+  await prisma.session.deleteMany()
+  await prisma.user.deleteMany()
 
   const [tropicals, succulents, statement, trailing] = await Promise.all([
     prisma.category.create({ data: { name: 'Tropicals' } }),
@@ -338,7 +341,16 @@ async function main() {
     }),
   ])
 
-  console.log(`Seeded products across 4 categories with variants, stock, and promos.`)
+  // --- Admin user ---
+  await prisma.user.create({
+    data: {
+      email: 'admin@plantshop.com',
+      passwordHash: await bcrypt.hash('admin123', 12),
+      role: 'ADMIN',
+    },
+  })
+
+  console.log(`Seeded products across 4 categories with variants, stock, promos, and admin user.`)
 }
 
 main()

@@ -22,7 +22,7 @@ export async function loginUser(email: string, password: string) {
   const token = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   await prisma.session.create({ data: { id: token, userId: user.id, expiresAt } })
-  return { id: user.id, email: user.email, token, expiresAt }
+  return { id: user.id, email: user.email, token, expiresAt, role: user.role }
 }
 
 export async function logoutUser(token: string | undefined): Promise<void> {
@@ -34,7 +34,7 @@ export async function logoutUser(token: string | undefined): Promise<void> {
 export async function getMe(userId: string) {
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, createdAt: true },
+    select: { id: true, email: true, role: true, createdAt: true },
   })
 }
 

@@ -9,6 +9,7 @@ import wishlist from './routes/wishlist.js'
 import addresses from './routes/addresses.js'
 import categories from './routes/categories.js'
 import promos from './routes/promos.js'
+import admin from './routes/admin.js'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
@@ -16,7 +17,7 @@ const app = new Hono().basePath('/api')
 
 app.use(logger())
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
 }))
 
@@ -34,6 +35,7 @@ app.route('/wishlist', wishlist)
 app.route('/addresses', addresses)
 app.route('/categories', categories)
 app.route('/promos', promos)
+app.route('/admin', admin)
 
 serve({
   fetch: app.fetch,

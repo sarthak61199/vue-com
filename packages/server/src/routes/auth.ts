@@ -30,7 +30,7 @@ auth.post('/login', validate('json', LoginSchema), async (c) => {
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
     })
-    return c.json({ id: result.id, email: result.email })
+    return c.json({ id: result.id, email: result.email, role: result.role })
   } catch (err) {
     return handleServiceError(err, c)
   }

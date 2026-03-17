@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Structure
 
-npm workspaces monorepo with five packages:
-- `packages/web` — Vue 3 + TypeScript SPA (Vite)
+npm workspaces monorepo with six packages:
+- `packages/web` — Vue 3 + TypeScript SPA (Vite), storefront on port 5173
+- `packages/admin` — Vue 3 + TypeScript SPA (Vite), admin panel on port 5174
 - `packages/server` — Hono REST API + Prisma + SQLite
 - `packages/schemas` — shared Zod validation schemas (imported by both web and server)
-- `packages/ui` — shared base UI components and theme CSS (imported by web; intended for future admin panel too)
-- `packages/api` — API fetch client and all response types (imported by web; intended for future admin panel too)
+- `packages/ui` — shared base UI components and theme CSS (imported by web and admin)
+- `packages/api` — API fetch client and all response types (imported by web and admin)
 
 ## Commands
 
@@ -22,6 +23,12 @@ npm run build        # type-check + build for production
 npm run lint         # oxlint then eslint (both with --fix)
 npm run format       # format src/ with oxfmt
 npm run type-check   # vue-tsc type checking only
+
+# Admin (packages/admin/)
+npm run dev          # Vite dev server on port 5174
+npm run build        # type-check + build for production
+npm run lint         # oxlint then eslint (both with --fix)
+npm run format       # format src/ with oxfmt
 
 # Server (packages/server/)
 npm run dev          # tsx watch src/index.ts (port 3000)
@@ -125,6 +132,7 @@ Variant label helper — use `getVariantLabel(variant)` from `src/utils/format.t
 - **`QuantityStepper`** — props: `quantity`, `disableMinus?`, `disablePlus?`; emits `change` with new quantity. Purely presentational — all disable logic is computed by the parent.
 - **`StarRating`** — presentational; props: `rating: number | null`, `count?: number`, `size?: 'sm' | 'md'`.
 - **`PaginationControls`** — props: `page`, `total`, `pageSize`; emits `prev`/`next`.
+- **`DataTable`** — wraps a `<table>` with consistent styling; named slot `#head` for `<th>` cells, default slot for `<tr>` rows.
 
 Feature components in `packages/web/src/components/`:
 - **`ProductReviews.vue`** — props: `productId`. Uses `productReviewsQuery` and `reviewEligibilityQuery` (eligibility only enabled when authenticated). `useSubmitReview` mutation invalidates reviews, eligibility, and product on success.
@@ -145,6 +153,37 @@ Two linters run in sequence via `npm run lint`:
 2. **eslint** — Vue-specific rules, configured in `eslint.config.ts`
 
 Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-config-prettier` to avoid conflicts.
+
+## Admin Architecture (`packages/admin/`)
+
+Vue 3 + TypeScript SPA on port **5174**. Same stack as `packages/web` — Vue Router, Pinia, Pinia Colada, `@tanstack/vue-form`. Uses the same `ui`, `api`, and `schemas` aliases (wired up identically to `packages/web`).
+
+`src/App.vue` renders `<AdminSidebar>` + `<router-view />` (sidebar layout, no header/footer). Routes: `/login` (LoginPage, guest only), `/` (DashboardPage), `/orders` (OrderListPage), `/orders/:id` (OrderDetailPage), `/users` (UserListPage), `/users/:id` (UserDetailPage), `/reviews` (ReviewListPage) — all except login require auth + admin role.
+
+Route guard awaits `authStore.initPromise` before evaluating. Non-admin users attempting to log in see an error (not a redirect — login page handles the role check after `api.login()`).
+
+Pinia Colada configured with `staleTime: 15s`, `gcTime: 5min`, `refetchOnWindowFocus: false` (admin panel intentionally doesn't auto-refresh on focus).
+
+### Data layer (admin)
+
+Query factories in `src/queries/`:
+- **`useDashboard.ts`** — `dashboardStatsQuery`; key `['admin', 'stats']`
+- **`useAdminOrders.ts`** — `adminOrdersQuery(filters)`; supports `page`, `search` (by email)
+- **`useAdminUsers.ts`** — `adminUsersQuery(filters)`; supports `page`, `search` (by email)
+- **`useAdminReviews.ts`** — `adminReviewsQuery(filters)`; supports `page`, `minRating`, `maxRating`
+
+Auth store at `src/stores/auth.ts` — same `initPromise` pattern as web. After login, checks `user.role === 'ADMIN'`; sets an error and calls logout if not admin.
+
+`src/utils/format.ts` — `formatPrice`, `formatDate`, `shortId` (truncates UUID for display).
+
+### Admin API types
+
+Key types in `packages/api/src/index.ts`:
+- **`ApiDashboardStats`** — `{ totalProducts, totalOrders, totalUsers, totalRevenue, recentOrders, lowStockVariants }`
+- **`ApiAdminOrder`** — order with `user: { email }` and `_count: { orderItems }`
+- **`ApiAdminUser`** — user with `role`, `_count: { orders, reviews }`
+- **`ApiAdminReview`** — review with `user: { email }` and `product: { name }`
+- **`ApiAdminVariantSummary`** — variant with `values: [{ option: { value } }]` for label rendering
 
 ## API Package (`packages/api/`)
 
@@ -172,7 +211,7 @@ New base/presentational components go in `packages/ui/src/components/` and must 
 
 ## Server Architecture (`packages/server/`)
 
-**Hono** on `@hono/node-server`, port 3000. CORS restricted to `http://localhost:5173` with `credentials: true`.
+**Hono** on `@hono/node-server`, port 3000. CORS allows `['http://localhost:5173', 'http://localhost:5174']` with `credentials: true`.
 
 ### Shared Schemas (`packages/schemas/`)
 
@@ -199,6 +238,7 @@ One service file per domain:
 - `promo.service.ts` — validatePromoCode, getAutoPromos, validatePromoInTransaction
 - `review.service.ts` — getProductReviews, getReviewEligibility, upsertReview (returns `{ review, isNew }` to distinguish 201/200)
 - `wishlist.service.ts` — get/add/remove with `.map()` transform to inject `defaultVariantId`
+- `admin.service.ts` — dashboard stats, paginated admin queries for orders/users/reviews
 
 **Error contract — `src/lib/errors.ts`:**
 ```ts
@@ -225,6 +265,8 @@ Cookie operations (`setCookie`, `deleteCookie`) stay in route handlers — they 
 
 Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware reads an httpOnly `session` cookie, looks up the session in DB, and sets `userId` in context. Sessions expire after 7 days. Passwords hashed with bcrypt (cost 12).
 
+`requireAdmin` middleware (`src/middleware/admin.ts`) runs after `requireAuth` — fetches the user by `userId` from context, returns 403 if `role !== 'ADMIN'`. Applied to all `/api/admin/*` routes.
+
 ### API Routes
 
 - `POST /api/auth/register` — create user; `POST /api/auth/login` — start session; `POST /api/auth/logout`; `GET /api/auth/me` (requires auth); `PATCH /api/auth/password` (requires auth, body `{ currentPassword, newPassword }`)
@@ -241,6 +283,15 @@ Session-cookie auth via `src/middleware/auth.ts`. The `requireAuth` middleware r
 - `POST /api/promos/validate` (requires auth) — body `{ code, cartId }`; returns `{ promo, discountAmount }` or 400 with reason
 - `GET /api/promos/auto?cartId=X` (requires auth) — returns array of `{ promo, discountAmount }` for applicable automatic promos, sorted by discount descending
 - `GET /api/promos/display` (no auth) — returns `ApiDisplayPromo[]` for active PRODUCT/CATEGORY scoped promos; used to show sale prices on product listings and product pages
+
+### Admin API Routes (`/api/admin/*`)
+
+All require `requireAuth` + `requireAdmin`. Mounted from `src/routes/admin.ts`.
+
+- `GET /api/admin/stats` — dashboard: total products/orders/users/revenue, last 10 orders, variants with stock ≤ 5
+- `GET /api/admin/orders?page&search` — paginated (20/page), search by user email; `GET /api/admin/orders/:id` — full detail (no ownership check)
+- `GET /api/admin/users?page&search` — paginated with order/review counts; `GET /api/admin/users/:id` — detail with orders, reviews, addresses
+- `GET /api/admin/reviews?page&minRating&maxRating` — paginated with user/product info
 
 ### Database
 
@@ -261,7 +312,8 @@ SQLite does not have native enum support. Prisma enums (`PromoScope`, `DiscountT
 - `Order` — has `userId` FK, optional `addressId` FK, `total`, `discountAmount` (default 0), `shippingCost` (default 0), optional `promoId` FK
 - `Promo` — `code` (unique, nullable for automatic promos), `discountType` (`DiscountType`), `discountValue`, `scope` (`PromoScope`), optional `productId`/`categoryId` for scoped promos, `minOrderAmount?`, `maxUses?`, `maxUsesPerUser?`, `expiresAt?`, `isActive`, `isAutomatic`
 - `PromoUsage` — `@@unique([promoId, orderId])`; `@@index([promoId, userId])` for per-user count queries
-- `User`, `Session` (7-day expiry), `Review` (`@@unique([userId, productId])`), `WishlistItem` (composite PK `[userId, productId]`), `Address`
+- `User` — has `role String @default("USER")` (TEXT column, `"USER"` | `"ADMIN"`, enforced at app layer). Seed includes `admin@plantshop.com` / `admin123` with `role: "ADMIN"`. `ApiUser` includes `role: string`.
+- `Session` (7-day expiry), `Review` (`@@unique([userId, productId])`), `WishlistItem` (composite PK `[userId, productId]`), `Address`
 
 `DATABASE_URL` is set in `packages/server/.env` (default: `file:./dev.db`).
 
