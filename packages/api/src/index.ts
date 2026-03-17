@@ -273,6 +273,58 @@ export interface ApiAdminVariantSummary {
   product: { id: string; name: string }
 }
 
+export interface ApiProductOption {
+  id: string
+  name: string
+}
+
+export interface ApiAdminPromo {
+  id: string
+  code: string | null
+  description: string
+  discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING'
+  discountValue: number
+  scope: 'ORDER' | 'PRODUCT' | 'CATEGORY'
+  productId: string | null
+  categoryId: string | null
+  minOrderAmount: number | null
+  maxUses: number | null
+  maxUsesPerUser: number | null
+  expiresAt: string | null
+  isActive: boolean
+  isAutomatic: boolean
+  createdAt: string
+  updatedAt: string
+  product: { id: string; name: string } | null
+  category: { id: string; name: string } | null
+  _count: { usages: number }
+}
+
+export interface ApiAdminPromoDetail extends ApiAdminPromo {
+  usages: {
+    id: string
+    createdAt: string
+    user: { id: string; email: string }
+    order: { id: string; total: number; createdAt: string }
+  }[]
+}
+
+export interface ApiCreatePromoInput {
+  code?: string | null
+  description: string
+  discountType: 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING'
+  discountValue: number
+  scope: 'ORDER' | 'PRODUCT' | 'CATEGORY'
+  productId?: string | null
+  categoryId?: string | null
+  minOrderAmount?: number | null
+  maxUses?: number | null
+  maxUsesPerUser?: number | null
+  expiresAt?: string | null
+  isActive: boolean
+  isAutomatic: boolean
+}
+
 export interface ApiDashboardStats {
   totalProducts: number
   totalOrders: number
@@ -292,10 +344,10 @@ export interface ApiDashboardStats {
 
 export const api = {
   // Auth
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, confirm: string) =>
     request<ApiUser>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, confirm }),
     }),
   login: (email: string, password: string) =>
     request<ApiUser>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
@@ -408,4 +460,17 @@ export const adminApi = {
     if (maxRating != null) params.set('maxRating', String(maxRating))
     return request<ApiAdminReviewsPage>(`/admin/reviews?${params}`)
   },
+  deleteReview: (id: string) =>
+    request<{ success: boolean }>(`/admin/reviews/${id}`, { method: 'DELETE' }),
+
+  getProductOptions: () => request<ApiProductOption[]>('/admin/product-options'),
+
+  listPromos: () => request<ApiAdminPromo[]>('/admin/promos'),
+  getPromo: (id: string) => request<ApiAdminPromoDetail>(`/admin/promos/${id}`),
+  createPromo: (data: ApiCreatePromoInput) =>
+    request<ApiAdminPromo>('/admin/promos', { method: 'POST', body: JSON.stringify(data) }),
+  updatePromo: (id: string, data: Partial<ApiCreatePromoInput>) =>
+    request<ApiAdminPromo>(`/admin/promos/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deletePromo: (id: string) =>
+    request<{ success: boolean }>(`/admin/promos/${id}`, { method: 'DELETE' }),
 }

@@ -158,7 +158,7 @@ Formatting uses **oxfmt** (not Prettier) scoped to `src/`. ESLint uses `eslint-c
 
 Vue 3 + TypeScript SPA on port **5174**. Same stack as `packages/web` — Vue Router, Pinia, Pinia Colada, `@tanstack/vue-form`. Uses the same `ui`, `api`, and `schemas` aliases (wired up identically to `packages/web`).
 
-`src/App.vue` renders `<AdminSidebar>` + `<router-view />` (sidebar layout, no header/footer). Routes: `/login` (LoginPage, guest only), `/` (DashboardPage), `/orders` (OrderListPage), `/orders/:id` (OrderDetailPage), `/users` (UserListPage), `/users/:id` (UserDetailPage), `/reviews` (ReviewListPage) — all except login require auth + admin role.
+`src/App.vue` renders `<AdminSidebar>` + `<router-view />` (sidebar layout, no header/footer). Routes: `/login` (LoginPage, guest only), `/` (DashboardPage), `/orders` (OrderListPage), `/orders/:id` (OrderDetailPage), `/users` (UserListPage), `/users/:id` (UserDetailPage), `/reviews` (ReviewListPage), `/promos` (PromoListPage), `/promos/new` (PromoCreatePage), `/promos/:id` (PromoEditPage) — all except login require auth + admin role. `/promos/new` is registered before `/promos/:id` so it takes priority.
 
 Route guard awaits `authStore.initPromise` before evaluating. Non-admin users attempting to log in see an error (not a redirect — login page handles the role check after `api.login()`).
 
@@ -171,10 +171,15 @@ Query factories in `src/queries/`:
 - **`useAdminOrders.ts`** — `adminOrdersQuery(filters)`; supports `page`, `search` (by email)
 - **`useAdminUsers.ts`** — `adminUsersQuery(filters)`; supports `page`, `search` (by email)
 - **`useAdminReviews.ts`** — `adminReviewsQuery(filters)`; supports `page`, `minRating`, `maxRating`
+- **`useAdminPromos.ts`** — `adminPromosQuery` (object form, no params); `adminPromoQuery(id)` factory; `adminProductOptionsQuery` (all product `{id,name}` for promo form picker)
 
 Auth store at `src/stores/auth.ts` — same `initPromise` pattern as web. After login, checks `user.role === 'ADMIN'`; sets an error and calls logout if not admin.
 
 `src/utils/format.ts` — `formatPrice`, `formatDate`, `shortId` (truncates UUID for display).
+
+`src/components/AdminSidebar.vue` — sticky nav sidebar. `src/components/PromoForm.vue` — shared create/edit promo form; accepts `initial?: ApiAdminPromo` (pre-fills for edit), `isSubmitting`, `submitLabel`; emits `submit(ApiCreatePromoInput)`. Fetches categories and product options internally. Conditional rendering: `code` field hidden when `isAutomatic=true`; `productId`/`categoryId` pickers shown based on `scope`; `discountValue` hidden when `discountType=FREE_SHIPPING`. Used by both PromoCreatePage and PromoEditPage.
+
+`src/utils/format.ts` — `formatPrice`, `formatDate`, `shortId`, `toDatetimeLocal(isoString)` (converts UTC ISO → `YYYY-MM-DDTHH:mm` for datetime-local input), `formatDiscountValue(discountType, discountValue)` (e.g. "10%", "$5.00", "Free shipping").
 
 ### Admin API types
 
@@ -184,6 +189,9 @@ Key types in `packages/api/src/index.ts`:
 - **`ApiAdminUser`** — user with `role`, `_count: { orders, reviews }`
 - **`ApiAdminReview`** — review with `user: { email }` and `product: { name }`
 - **`ApiAdminVariantSummary`** — variant with `values: [{ option: { value } }]` for label rendering
+- **`ApiAdminPromo`** — full promo with all fields + `_count.usages`, `product`, `category`
+- **`ApiAdminPromoDetail`** — extends `ApiAdminPromo` with `usages[]` (last 20, includes user+order)
+- **`ApiCreatePromoInput`** — input type for create/update promo; `expiresAt` is ISO string or null
 
 ## API Package (`packages/api/`)
 
@@ -291,7 +299,10 @@ All require `requireAuth` + `requireAdmin`. Mounted from `src/routes/admin.ts`.
 - `GET /api/admin/stats` — dashboard: total products/orders/users/revenue, last 10 orders, variants with stock ≤ 5
 - `GET /api/admin/orders?page&search` — paginated (20/page), search by user email; `GET /api/admin/orders/:id` — full detail (no ownership check)
 - `GET /api/admin/users?page&search` — paginated with order/review counts; `GET /api/admin/users/:id` — detail with orders, reviews, addresses
-- `GET /api/admin/reviews?page&minRating&maxRating` — paginated with user/product info
+- `GET /api/admin/reviews?page&minRating&maxRating` — paginated with user/product info; `DELETE /api/admin/reviews/:id` — delete review (moderation)
+- `GET /api/admin/promos` — all promos with `_count.usages`, product/category names; `GET /api/admin/promos/:id` — detail including last 20 usages
+- `POST /api/admin/promos` — body: `CreatePromoSchema`; `PATCH /api/admin/promos/:id` — partial update (`UpdatePromoSchema`); `DELETE /api/admin/promos/:id` — 400 if has usages
+- `GET /api/admin/product-options` — returns `{ id, name }[]` for all products (used by promo form scope=PRODUCT picker)
 
 ### Database
 

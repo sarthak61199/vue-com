@@ -7,6 +7,9 @@ import OrderDetailPage from '@/pages/OrderDetailPage.vue'
 import UserListPage from '@/pages/UserListPage.vue'
 import UserDetailPage from '@/pages/UserDetailPage.vue'
 import ReviewListPage from '@/pages/ReviewListPage.vue'
+import PromoListPage from '@/pages/PromoListPage.vue'
+import PromoCreatePage from '@/pages/PromoCreatePage.vue'
+import PromoEditPage from '@/pages/PromoEditPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +48,21 @@ const router = createRouter({
     {
       path: '/reviews',
       component: ReviewListPage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/promos',
+      component: PromoListPage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/promos/new',
+      component: PromoCreatePage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/promos/:id',
+      component: PromoEditPage,
       meta: { requiresAuth: true },
     },
   ],

@@ -1,4 +1,7 @@
 import prisma from '../lib/prisma.js'
+import { ServiceError } from '../lib/errors.js'
+import { DiscountType, PromoScope } from '../../prisma/generated/client.js'
+import type { CreatePromoInput, UpdatePromoInput } from 'schemas'
 
 // --- Dashboard ---
 
@@ -155,7 +158,99 @@ export async function adminGetUser(id: string) {
   })
 }
 
+// --- Promos ---
+
+export async function adminListPromos() {
+  return prisma.promo.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: { select: { usages: true } },
+      product: { select: { id: true, name: true } },
+      category: { select: { id: true, name: true } },
+    },
+  })
+}
+
+export async function adminGetPromo(id: string) {
+  return prisma.promo.findUnique({
+    where: { id },
+    include: {
+      _count: { select: { usages: true } },
+      product: { select: { id: true, name: true } },
+      category: { select: { id: true, name: true } },
+      usages: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: {
+          user: { select: { id: true, email: true } },
+          order: { select: { id: true, total: true, createdAt: true } },
+        },
+      },
+    },
+  })
+}
+
+export async function adminGetProductOptions() {
+  return prisma.product.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  })
+}
+
+export async function adminCreatePromo(data: CreatePromoInput) {
+  return prisma.promo.create({
+    data: {
+      code: data.code || null,
+      description: data.description,
+      discountType: data.discountType as DiscountType,
+      discountValue: data.discountValue,
+      scope: data.scope as PromoScope,
+      productId: data.productId || null,
+      categoryId: data.categoryId || null,
+      minOrderAmount: data.minOrderAmount ?? null,
+      maxUses: data.maxUses ?? null,
+      maxUsesPerUser: data.maxUsesPerUser ?? null,
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      isActive: data.isActive,
+      isAutomatic: data.isAutomatic,
+    },
+  })
+}
+
+export async function adminUpdatePromo(id: string, data: UpdatePromoInput) {
+  const update: Record<string, unknown> = {}
+  if (data.code !== undefined) update['code'] = data.code || null
+  if (data.description !== undefined) update['description'] = data.description
+  if (data.discountType !== undefined) update['discountType'] = data.discountType as DiscountType
+  if (data.discountValue !== undefined) update['discountValue'] = data.discountValue
+  if (data.scope !== undefined) update['scope'] = data.scope as PromoScope
+  if (data.productId !== undefined) update['productId'] = data.productId || null
+  if (data.categoryId !== undefined) update['categoryId'] = data.categoryId || null
+  if (data.minOrderAmount !== undefined) update['minOrderAmount'] = data.minOrderAmount ?? null
+  if (data.maxUses !== undefined) update['maxUses'] = data.maxUses ?? null
+  if (data.maxUsesPerUser !== undefined) update['maxUsesPerUser'] = data.maxUsesPerUser ?? null
+  if (data.expiresAt !== undefined) update['expiresAt'] = data.expiresAt ? new Date(data.expiresAt) : null
+  if (data.isActive !== undefined) update['isActive'] = data.isActive
+  if (data.isAutomatic !== undefined) update['isAutomatic'] = data.isAutomatic
+
+  return prisma.promo.update({ where: { id }, data: update })
+}
+
+export async function adminDeletePromo(id: string) {
+  const usageCount = await prisma.promoUsage.count({ where: { promoId: id } })
+  if (usageCount > 0) {
+    throw new ServiceError(400, 'Cannot delete a promo with existing usages. Deactivate it instead.')
+  }
+  await prisma.promo.delete({ where: { id } })
+}
+
 // --- Reviews ---
+
+export async function adminDeleteReview(id: string) {
+  const review = await prisma.review.findUnique({ where: { id }, select: { id: true } })
+  if (!review) throw new ServiceError(404, 'Review not found')
+  await prisma.review.delete({ where: { id } })
+}
 
 export async function adminListReviews(page: number, minRating?: number, maxRating?: number) {
   const PAGE_SIZE = 20

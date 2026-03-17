@@ -11,7 +11,16 @@ import {
   adminListUsers,
   adminGetUser,
   adminListReviews,
+  adminDeleteReview,
+  adminListPromos,
+  adminGetPromo,
+  adminGetProductOptions,
+  adminCreatePromo,
+  adminUpdatePromo,
+  adminDeletePromo,
 } from '../services/admin.service.js'
+import { validate } from '../lib/validate.js'
+import { CreatePromoSchema, UpdatePromoSchema } from 'schemas'
 
 const admin = new Hono<AuthEnv>()
 
@@ -79,6 +88,73 @@ admin.get('/reviews', async (c) => {
     const maxRating = c.req.query('maxRating') ? Number(c.req.query('maxRating')) : undefined
     const result = await adminListReviews(page, minRating, maxRating)
     return c.json(result)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+admin.delete('/reviews/:id', async (c) => {
+  try {
+    await adminDeleteReview(c.req.param('id'))
+    return c.json({ success: true })
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+// Promos
+admin.get('/product-options', async (c) => {
+  try {
+    const products = await adminGetProductOptions()
+    return c.json(products)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+admin.get('/promos', async (c) => {
+  try {
+    const promos = await adminListPromos()
+    return c.json(promos)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+admin.get('/promos/:id', async (c) => {
+  try {
+    const promo = await adminGetPromo(c.req.param('id'))
+    if (!promo) throw new ServiceError(404, 'Promo not found')
+    return c.json(promo)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+admin.post('/promos', validate('json', CreatePromoSchema), async (c) => {
+  try {
+    const data = c.req.valid('json')
+    const promo = await adminCreatePromo(data)
+    return c.json(promo, 201)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+admin.patch('/promos/:id', validate('json', UpdatePromoSchema), async (c) => {
+  try {
+    const data = c.req.valid('json')
+    const promo = await adminUpdatePromo(c.req.param('id'), data)
+    return c.json(promo)
+  } catch (err) {
+    return handleServiceError(err, c)
+  }
+})
+
+admin.delete('/promos/:id', async (c) => {
+  try {
+    await adminDeletePromo(c.req.param('id'))
+    return c.json({ success: true })
   } catch (err) {
     return handleServiceError(err, c)
   }

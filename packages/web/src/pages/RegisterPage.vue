@@ -12,7 +12,7 @@ const form = useForm({
   defaultValues: { email: '', password: '', confirm: '' },
   validators: { onChange: RegisterSchema },
   onSubmit: async ({ value }) => {
-    await authStore.register(value.email, value.password)
+    await authStore.register(value.email, value.password, value.confirm)
     if (authStore.user) router.push('/')
   },
 })

@@ -13,7 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = computed<ApiUser | null>(() => userData.value ?? null)
 
-  const initPromise = refresh().then(() => {})
+  const initPromise = refresh().then(() => { })
 
   const {
     mutateAsync: loginMutate,
@@ -33,8 +33,8 @@ export const useAuthStore = defineStore('auth', () => {
     asyncStatus: registerAsyncStatus,
     error: registerError,
   } = useMutation({
-    mutation: async ({ email, password }: { email: string; password: string }) => {
-      await api.register(email, password)
+    mutation: async ({ email, password, confirm }: { email: string; password: string; confirm: string }) => {
+      await api.register(email, password, confirm)
       return api.login(email, password)
     },
     onSuccess: (loginData) => {
@@ -68,9 +68,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const register = async (email: string, password: string) => {
+  const register = async (email: string, password: string, confirm: string) => {
     try {
-      await registerMutate({ email, password })
+      await registerMutate({ email, password, confirm })
     } catch {
       // error exposed via mutationError
     }
